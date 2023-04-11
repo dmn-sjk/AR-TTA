@@ -4,3 +4,4 @@ models
 results
 .vscode
 .env
+source_dirs.sh

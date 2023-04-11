@@ -1,7 +1,7 @@
 from torchvision.transforms import transforms
 
 
-def get_transforms(train: bool = False):
+def get_transforms(cfg, train: bool = False):
     img_resize = (224, 224)
 
     if train:
@@ -25,11 +25,11 @@ def get_transforms(train: bool = False):
             transforms.RandomApply([transforms.GaussianBlur(
                 kernel_size=5, sigma=[0.1, 2.0])], p=0.5),
             transforms.RandomHorizontalFlip(),
-            transforms.ToTensor(),
+            # transforms.ToTensor(),
         ])
 
     else:
         return transforms.Compose([
             transforms.Resize(size=img_resize),
-            transforms.ToTensor(),
+            # transforms.ToTensor(),
         ])

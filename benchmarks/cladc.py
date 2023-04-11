@@ -1,0 +1,10 @@
+import clad
+from utils.transforms import get_transforms
+
+
+def get_cladc_benchmark(cfg):
+    transforms_test = get_transforms(cfg, train=False)
+    
+    # TODO: add 1st experience as source stream for eval
+    return clad.cladc_avalanche(cfg["data_root"], test_transform=transforms_test, train_trasform=transforms_test, img_size=cfg["img_size"])
+    

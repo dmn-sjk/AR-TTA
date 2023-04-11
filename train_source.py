@@ -11,8 +11,9 @@ import os
 import wandb
 from torch.optim.lr_scheduler import ExponentialLR, LinearLR
 from tqdm import tqdm
-from torchvision.transforms import transforms
 from utils.transforms import get_transforms
+from benchmarks.shift import _SHIFTClassificationDataset
+from shift_dev.types import WeathersCoarse, TimesOfDayCoarse
 
 # TODO: whole file copied, rewrite properly
 
@@ -29,13 +30,13 @@ def set_seed(seed):
 
 def setup_parser_and_get_args():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--project_name', type=str, default='CLAD-C',
+    parser.add_argument('--project_name', type=str, default='Continual adaptation',
                         help='Name of the run')
-    parser.add_argument('--run_name', type=str, default='seq0_pretraining',
+    parser.add_argument('--run_name', type=str, default='source_training',
                         help='Name of the run')
-    parser.add_argument('--model', type=str, default='resnet18',
+    parser.add_argument('--model', type=str, default='resnet50',
                         help='Name of the run')
-    parser.add_argument('--root', default="/home/damian/Documents/datasets/clad/",
+    parser.add_argument('--data_root', default="/home/damian/Documents/datasets/",
                         help='Root folder where the data is stored')
     parser.add_argument('--num_workers', type=int, default=5,
                         help='Num workers to use for dataloading')
@@ -66,6 +67,14 @@ def main():
 
     if args.seed is not None:
         set_seed(args.seed)
+        
+    train_set = _SHIFTClassificationDataset(split='train', data_root=args.data_root, transforms=get_transforms(None, train=True),
+                                            weathers_coarse=[WeathersCoarse.clear], timeofdays_coarse=[TimesOfDayCoarse.daytime])
+    val_set = _SHIFTClassificationDataset(split='val', data_root=args.data_root, transforms=get_transforms(None, train=False),
+                                          weathers_coarse=[WeathersCoarse.clear], timeofdays_coarse=[TimesOfDayCoarse.daytime])
+    
+    train_loader = DataLoader(train_set, batch_size=args.batch_size, num_workers=args.num_workers, shuffle=True)
+    val_loader = DataLoader(val_set, batch_size=args.batch_size, num_workers=args.num_workers, shuffle=True)
 
     if args.model == 'resnet18':
         model = models.resnet18(weights=models.ResNet18_Weights.DEFAULT)
@@ -76,7 +85,8 @@ def main():
     else:
         raise ValueError(f"Unknown model name: {args.model}")
 
-    model.fc = Linear(model.fc.in_features, len(clad.SODA_CATEGORIES), bias=True)
+    # model.fc = Linear(model.fc.in_features, len(clad.SODA_CATEGORIES), bias=True)
+    model.fc = Linear(model.fc.in_features, len(train_set.classes), bias=True)
 
     model.to(device)
 
@@ -96,15 +106,11 @@ def main():
         os.mkdir(models_path)
 
     if args.wandb:
-        wandb.init(config=args, project=args.project_name, group="seq0_pretraining",
-                   name=f"{args.model}_heavyaugs", job_type=f"{args.model}_heavyaugs")
+        wandb.init(config=args, project=args.project_name, group="shift_c",
+                   name=f"{args.run_name}_{args.model}", job_type=f"{args.run_name}_{args.model}")
 
-    train_set = clad.get_cladc_train(args.root, transform=get_transforms(train=True))[0]
-    val_set = clad.get_cladc_val(args.root, transform=get_transforms(train=False))
-    train_loader = DataLoader(
-        train_set, batch_size=args.batch_size, num_workers=args.num_workers, shuffle=True)
-    val_loader = DataLoader(val_set, batch_size=args.batch_size,
-                            num_workers=args.num_workers, shuffle=True)
+    # train_set = clad.get_cladc_train(args.root, transform=get_transforms(None, train=True))[0]
+    # val_set = clad.get_cladc_val(args.root, transform=get_transforms(None, train=False))
 
     EVAL_EVERY_EPOCHS = 1
 
@@ -170,7 +176,7 @@ def main():
 
                 if avg_vloss < best_loss:
                     torch.save(model.state_dict(),
-                               os.path.join(models_path, f"clad-c_{args.model}_heavyaugs.pth"))
+                               os.path.join(models_path, f"shift_c_{args.model}.pth"))
                     best_loss = avg_vloss
 
     if args.wandb:
