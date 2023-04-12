@@ -14,6 +14,7 @@ from tqdm import tqdm
 from utils.transforms import get_transforms
 from benchmarks.shift import _SHIFTClassificationDataset
 from shift_dev.types import WeathersCoarse, TimesOfDayCoarse
+from shift_dev.utils.backend import ZipBackend
 
 # TODO: whole file copied, rewrite properly
 
@@ -69,9 +70,11 @@ def main():
         set_seed(args.seed)
         
     train_set = _SHIFTClassificationDataset(split='train', data_root=args.data_root, transforms=get_transforms(None, train=True),
-                                            weathers_coarse=[WeathersCoarse.clear], timeofdays_coarse=[TimesOfDayCoarse.daytime])
+                                            weathers_coarse=[WeathersCoarse.clear], timeofdays_coarse=[TimesOfDayCoarse.daytime],
+                                            backend=ZipBackend())
     val_set = _SHIFTClassificationDataset(split='val', data_root=args.data_root, transforms=get_transforms(None, train=False),
-                                          weathers_coarse=[WeathersCoarse.clear], timeofdays_coarse=[TimesOfDayCoarse.daytime])
+                                          weathers_coarse=[WeathersCoarse.clear], timeofdays_coarse=[TimesOfDayCoarse.daytime],
+                                          backend=ZipBackend())
     
     train_loader = DataLoader(train_set, batch_size=args.batch_size, num_workers=args.num_workers, shuffle=True)
     val_loader = DataLoader(val_set, batch_size=args.batch_size, num_workers=args.num_workers, shuffle=True)

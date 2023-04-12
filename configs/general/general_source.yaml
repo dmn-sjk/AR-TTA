@@ -1,0 +1,4 @@
+model: resnet50
+dataset: shift
+project_name: continual_adaptation
+run_name: shift_c_source

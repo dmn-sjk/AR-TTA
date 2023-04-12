@@ -1,2 +1,4 @@
 seed: 1234
 data_root: /NFS_SHARE/
+benchmark: shift_mix
+pretrained_model_path: models_checkpoints/shift_c_resnet50.pth
