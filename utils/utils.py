@@ -1,6 +1,6 @@
 from torch import nn
 import torch
-from random import random
+import random
 import numpy as np
 
 

@@ -159,6 +159,8 @@ def _get_domains_mix_sets(cfg):
                                             backend=ZipBackend(),
                                             classification_img_size=cfg['img_size']))
             print(f"{weather} weather {timeofday} time data train split size: {len(train_sets[-1])}")
+            
+    return train_sets, val_sets
 
 # TODO: add clear and daytime as source experience for eval
 

@@ -19,7 +19,6 @@ ExpSequence = Iterable[CLExperience]
 import torch
 
 from avalanche.training.templates import SupervisedTemplate, BaseTemplate
-import tent
 from avalanche.core import SupervisedPlugin
 
 
