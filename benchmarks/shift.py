@@ -5,7 +5,7 @@ from avalanche.benchmarks.utils import (
     classification_subset,
 )
 from shift_dev.types import Keys, WeathersCoarse, TimesOfDayCoarse
-from shift_dev.utils.backend import HDF5Backend
+from shift_dev.utils.backend import HDF5Backend, ZipBackend
 from avalanche.benchmarks.scenarios.generic_benchmark_creation import create_multi_dataset_generic_benchmark
 
 from shift_dev.dataloader.shift_dataset import SHIFTDataset
@@ -87,7 +87,7 @@ def _get_weather_sets(cfg):
                                         weathers_coarse=[weather],
                                         timeofdays_coarse=[
                                             TimesOfDayCoarse.daytime],
-                                        backend=HDF5Backend(),
+                                        backend=ZipBackend(),
                                         classification_img_size=cfg['img_size']))
         print(
             f"{weather} weather {TimesOfDayCoarse.daytime} time data train split size: {len(train_sets[-1])}")
@@ -98,7 +98,7 @@ def _get_weather_sets(cfg):
                                             weathers_coarse=[weather],
                                             timeofdays_coarse=[
                                                 TimesOfDayCoarse.daytime],
-                                            backend=HDF5Backend(),
+                                            backend=ZipBackend(),
                                             classification_img_size=cfg['img_size']))
         print(
             f"{weather} weather {TimesOfDayCoarse.daytime} time data val split size: {len(val_sets[-1])}")
@@ -118,7 +118,7 @@ def _get_timeofday_sets(cfg):
                                         transforms=transforms_test,
                                         weathers_coarse=[WeathersCoarse.clear],
                                         timeofdays_coarse=[timeofday],
-                                        backend=HDF5Backend(),
+                                        backend=ZipBackend(),
                                         classification_img_size=cfg['img_size']))
         print(f"{WeathersCoarse.clear} weather {timeofday} time data train split size: {len(train_sets[-1])}")
 
@@ -127,10 +127,38 @@ def _get_timeofday_sets(cfg):
                                             transforms=transforms_test,
                                             weathers_coarse=[WeathersCoarse.clear],
                                             timeofdays_coarse=[timeofday],
-                                            backend=HDF5Backend(),
+                                            backend=ZipBackend(),
                                             classification_img_size=cfg['img_size']))
         print(f"{WeathersCoarse.clear} weather {timeofday} time data val split size: {len(val_sets[-1])}")
     return train_sets, val_sets
+
+def _get_domains_mix_sets(cfg):
+    train_sets = []
+    val_sets = []
+    
+    transforms_test = get_transforms(cfg, train=False)
+    
+    val_sets.append(_SHIFTClassificationDataset(split='val',
+                                                data_root=cfg['data_root'],
+                                                transforms=transforms_test,
+                                                weathers_coarse=[WeathersCoarse.clear],
+                                                timeofdays_coarse=[TimesOfDayCoarse.daytime],
+                                                backend=ZipBackend(),
+                                                classification_img_size=cfg['img_size']))
+    print(f"{WeathersCoarse.clear} weather {TimesOfDayCoarse.daytime} time data val split size: {len(val_sets[-1])}")
+
+    for timeofday in _TIMEOFDAY_SEQUENCE:
+        for weather in _WEATHERS_SEQUENCE:
+            print(f"Loading {weather} weather {timeofday} time of day data...")
+
+            train_sets.append(_SHIFTClassificationDataset(split='train',
+                                            data_root=cfg['data_root'],
+                                            transforms=transforms_test,
+                                            weathers_coarse=[weather],
+                                            timeofdays_coarse=[timeofday],
+                                            backend=ZipBackend(),
+                                            classification_img_size=cfg['img_size']))
+            print(f"{weather} weather {timeofday} time data train split size: {len(train_sets[-1])}")
 
 # TODO: add clear and daytime as source experience for eval
 
@@ -141,6 +169,8 @@ def get_shift_benchmark(cfg):
         train_sets, val_sets = _get_weather_sets(cfg)
     elif cfg['benchmark'] == "shift_timeofday":
         train_sets, val_sets = _get_timeofday_sets(cfg)
+    elif cfg['benchmark'] == 'shift_mix':
+        train_sets, val_sets = _get_domains_mix_sets(cfg)
     else:
         raise ValueError("Unknown type of shift benchmark")
 
@@ -155,7 +185,8 @@ def get_shift_benchmark(cfg):
             train_set,
             # transform_groups=transform_groups,
             initial_transform_group="train",
-            task_labels=i
+            task_labels=i,
+            
         )
 
         train_exps_datasets.append(
