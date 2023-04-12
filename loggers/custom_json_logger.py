@@ -29,7 +29,7 @@ if args.save_results:
 if args.save_results:
     results_path = os.path.join("experiments", f"{args.run_name}_{args.method}")
     if not os.path.isdir(results_path):
-        os.mkdir(results_path)
+        os.mkdir(results_path, exist_ok = True)
     with open(os.path.join(results_path, f"{args.run_name}_{args.method}_results.json"), 'w') \
             as file:
         json.dump(results_dict, file)

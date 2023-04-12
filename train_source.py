@@ -106,7 +106,7 @@ def main():
 
     models_path = "models_checkpoints"
     if not os.path.isdir(models_path):
-        os.mkdir(models_path)
+        os.mkdir(models_path, exist_ok = True)
 
     if args.wandb:
         wandb.init(config=args, project=args.project_name, group="shift_c",

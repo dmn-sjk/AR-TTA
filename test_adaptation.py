@@ -62,7 +62,7 @@ def main():
     if cfg['save_results']:
         results_path = os.path.join("experiments", f"{cfg['run_name']}_{cfg['method']}")
         if not os.path.isdir(results_path):
-            os.mkdir(results_path)
+            os.mkdir(results_path, exist_ok=True)
         with open(os.path.join(results_path, f"{cfg['run_name']}_{cfg['method']}_results.json"), 'w') \
                 as file:
             json.dump(results_dict, file)
