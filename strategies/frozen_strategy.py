@@ -15,11 +15,16 @@ from avalanche.training.templates.observation_type import OnlineObservation
 
 ExpSequence = Iterable[CLExperience]
 
-
 import torch
 
 from avalanche.training.templates import SupervisedTemplate, BaseTemplate
 from avalanche.core import SupervisedPlugin
+
+
+
+def get_frozen_strategy(cfg, model: Module, eval_plugin: EvaluationPlugin, plugins: Sequence):
+    return FrozenModel(model, train_mb_size=cfg['batch_size'], eval_mb_size=128,
+                       device=cfg['device'], evaluator=eval_plugin, plugins=plugins, eval_every=-1)
 
 
 class FrozenPlugin(SupervisedPlugin):

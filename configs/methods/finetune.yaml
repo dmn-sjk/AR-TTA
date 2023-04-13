@@ -1,1 +1,2 @@
 model: resnet50
+lr: 1.e-3

@@ -2,9 +2,41 @@ import torch
 from torch import nn
 
 from avalanche.training.templates import SupervisedTemplate, BaseTemplate
-import tent
 from avalanche.core import SupervisedPlugin
+import strategies.tent as tent
+from strategies.frozen_strategy import FrozenModel
+from avalanche.training.plugins import EvaluationPlugin
+from typing import Sequence
 
+
+def get_tent_strategy(cfg, model: nn.Module, eval_plugin: EvaluationPlugin, plugins: Sequence):
+    # model, params = get_tented_model_and_params(model)
+    # optimizer = torch.optim.SGD(params, lr=1e-3)
+    #
+    # from tent import softmax_entropy
+    #
+    # def softmax_entropy_loss(x: torch.Tensor, _):
+    #     return softmax_entropy(x).mean(0)
+    #
+    # criterion = softmax_entropy_loss
+    #
+    # plugins.append(TentPlugin())
+    #
+    # strategy = Naive(
+    #     model, optimizer, criterion, train_mb_size=batch_size, train_epochs=1, eval_mb_size=128,
+    #     device=device, evaluator=eval_plugin, plugins=plugins, eval_every=-1)
+
+    # plugins.append(TentPlugin(lr=1e-3))
+
+    # ----
+    model = tent.configure_model(model)
+    params, param_names = tent.collect_params(model)
+    optimizer = torch.optim.SGD(params, lr=cfg['lr'])
+    tented_model = tent.Tent(model, optimizer)
+    
+    return FrozenModel(
+        tented_model, train_mb_size=cfg['batch_size'], eval_mb_size=32,
+        device=cfg['device'], evaluator=eval_plugin, plugins=plugins, eval_every=-1)
 
 # class TentPlugin(SupervisedPlugin):
 #     def __init__(self, lr: float = 1e-3):

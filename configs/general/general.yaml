@@ -1,2 +1,11 @@
-seed: 1234
+# wandb
+project_name: continual_adaptation
+
+# general settings
 data_root: /NFS_SHARE/
+seed: 1234
+cuda: 0
+num_workers: 5 
+log_dir: logs
+model_ckpt_dir: models_checkpoints
+pretrained_model_path: models_checkpoints/shift_c_resnet50.pth

@@ -146,9 +146,12 @@ def _get_domains_mix_sets(cfg):
                                                 backend=ZipBackend(),
                                                 classification_img_size=cfg['img_size']))
     print(f"{WeathersCoarse.clear} weather {TimesOfDayCoarse.daytime} time data val split size: {len(val_sets[-1])}")
+    
+    times_seq = [TimesOfDayCoarse.daytime, *_TIMEOFDAY_SEQUENCE]
+    weathers_seq = [WeathersCoarse.clear, *_WEATHERS_SEQUENCE]
 
-    for timeofday in _TIMEOFDAY_SEQUENCE:
-        for weather in _WEATHERS_SEQUENCE:
+    for timeofday in times_seq:
+        for weather in weathers_seq:
             print(f"Loading {weather} weather {timeofday} time of day data...")
 
             train_sets.append(_SHIFTClassificationDataset(split='train',
@@ -209,7 +212,7 @@ def get_shift_benchmark(cfg):
         )
 
     return create_multi_dataset_generic_benchmark(train_datasets=train_exps_datasets,
-                                                    test_datasets=val_exps_datasets,
-                                                    # train_transform=None,
-                                                    # eval_transform=None
-                                                    )
+                                                  test_datasets=val_exps_datasets,
+                                                  # train_transform=None,
+                                                  # eval_transform=None
+                                                  )

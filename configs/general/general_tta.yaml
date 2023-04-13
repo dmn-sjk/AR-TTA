@@ -1,4 +1,6 @@
-seed: 1234
-data_root: /NFS_SHARE/
+# wandb
+run_name: tta
+
 benchmark: shift_mix
-pretrained_model_path: models_checkpoints/shift_c_resnet50.pth
+lr: 0.01
+batch_size: 10

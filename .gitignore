@@ -1,7 +1,7 @@
 __pycache__
 *.pyc
 models
-results
+logs
 .vscode
 .env
 source_dirs.sh

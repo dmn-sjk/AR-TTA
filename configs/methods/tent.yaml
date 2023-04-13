@@ -1,2 +1,2 @@
-batch_size: 64
 lr: 1.e-3
+model: resnet50
