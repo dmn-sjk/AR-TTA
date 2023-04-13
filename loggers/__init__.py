@@ -1,4 +1,3 @@
-from .custom_json_logger import *
 from .improved_wandb_logger import ImprovedWandBLogger
 
 from avalanche.logging import TextLogger, InteractiveLogger, WandBLogger, CSVLogger
