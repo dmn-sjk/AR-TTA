@@ -17,6 +17,7 @@ class Tent(nn.Module):
         self.steps = steps
         assert steps > 0, "tent requires >= 1 step(s) to forward and update"
         self.episodic = episodic
+        self.adapt = True
 
         # note: if the model is never reset, like for continual adaptation,
         # then skipping the state copy would save memory
@@ -28,7 +29,7 @@ class Tent(nn.Module):
             self.reset()
 
         for _ in range(self.steps):
-            outputs = forward_and_adapt(x, self.model, self.optimizer)
+            outputs = forward_and_adapt(x, self.model, self.optimizer, self.adapt)
 
         return outputs
 
@@ -46,18 +47,20 @@ def softmax_entropy(x: torch.Tensor) -> torch.Tensor:
 
 
 @torch.enable_grad()  # ensure grads in possible no grad context for testing
-def forward_and_adapt(x, model, optimizer):
+def forward_and_adapt(x, model, optimizer, adapt: bool = True):
     """Forward and adapt model on batch of data.
 
     Measure entropy of the model prediction, take gradients, and update params.
     """
     # forward
     outputs = model(x)
-    # adapt
-    loss = softmax_entropy(outputs).mean(0)
-    loss.backward()
-    optimizer.step()
-    optimizer.zero_grad()
+    
+    if adapt:
+        # adapt
+        loss = softmax_entropy(outputs).mean(0)
+        loss.backward()
+        optimizer.step()
+        optimizer.zero_grad()
     return outputs
 
 

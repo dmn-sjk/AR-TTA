@@ -1,0 +1,6 @@
+lr: 0.00025
+fisher_alpha: 2000.
+fisher_size: 2000
+e_margin: 2.763102111592855
+d_margin: 0.05
+fisher_clip_by_norm: 10

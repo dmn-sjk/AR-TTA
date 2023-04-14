@@ -1,4 +1,5 @@
 from .improved_wandb_logger import ImprovedWandBLogger
+from .json_logger import JSONLogger
 
 from avalanche.logging import TextLogger, InteractiveLogger, WandBLogger, CSVLogger
 from avalanche.evaluation.metrics import accuracy_metrics, loss_metrics, amca_metrics, timing_metrics
@@ -15,12 +16,11 @@ def get_eval_plugin(cfg, model: Module = None):
 
     if not os.path.exists(experiment_folder):
         os.makedirs(experiment_folder)
-
-    if cfg['text_logger']:
-        loggers.append(TextLogger(open(f"{experiment_folder}/{experiment_name}.txt", 'w')))
+        
+    path_to_log_file = os.path.join(experiment_folder, experiment_name + '_results')
 
     if cfg['save_results']:
-        loggers.append(CSVLogger(experiment_folder))
+        loggers.append(JSONLogger(open(path_to_log_file + '.json', 'w')))
 
     if cfg['wandb']:
         if model is not None:
@@ -34,5 +34,5 @@ def get_eval_plugin(cfg, model: Module = None):
         accuracy_metrics(minibatch=True, epoch_running=True, stream=True),
         loss_metrics(epoch_running=True, stream=True),
         amca_metrics(streams=("test", "train", "val")),
-        timing_metrics(epoch_running=True),
+        timing_metrics(epoch_running=True, epoch=True),
         loggers=loggers)

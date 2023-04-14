@@ -33,38 +33,11 @@ def get_tent_strategy(cfg, model: nn.Module, eval_plugin: EvaluationPlugin, plug
     params, param_names = tent.collect_params(model)
     optimizer = torch.optim.SGD(params, lr=cfg['lr'])
     tented_model = tent.Tent(model, optimizer)
-    
+    plugins.append(TentPlugin())
+
     return FrozenModel(
-        tented_model, train_mb_size=cfg['batch_size'], eval_mb_size=32,
+        tented_model, train_mb_size=cfg['batch_size'], eval_mb_size=128,
         device=cfg['device'], evaluator=eval_plugin, plugins=plugins, eval_every=-1)
-
-# class TentPlugin(SupervisedPlugin):
-#     def __init__(self, lr: float = 1e-3):
-#         super().__init__()
-#         self.lr = lr
-#         self.model_tented = False
-#         self.last_running_mean = []
-#         self.last_running_var = []
-
-#     def before_training(self, strategy: "SupervisedTemplate", **kwargs):
-#         if not self.model_tented:
-#             # self.last_running_mean =
-
-#             model = tent.configure_model(strategy.model)
-#             params, param_names = tent.collect_params(model)
-#             optimizer = torch.optim.SGD(params, lr=self.lr)
-#             tented_model = tent.Tent(model, optimizer)
-#             strategy.model = tented_model
-#             self.model_tented = True
-
-#     def before_eval(self, strategy: "SupervisedTemplate", **kwargs):
-#         if self.model_tented:
-
-#             strategy.model = strategy.model.model
-#             for param in strategy.model.parameters():
-#                 param.requires_grad = False
-
-#         self.model_tented = False
 
 
 def get_tented_model_and_params(model):
@@ -91,7 +64,7 @@ class TentPlugin(SupervisedPlugin):
         super().__init__()
 
     def before_training(self, strategy: "SupervisedTemplate", **kwargs):
-        strategy.model.eval()
-        for m in strategy.model.modules():
-            if isinstance(m, nn.BatchNorm2d):
-                m.train()
+        strategy.model.adapt = True
+
+    def before_eval(self, strategy: "SupervisedTemplate", **kwargs):
+        strategy.model.adapt = False

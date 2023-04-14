@@ -2,7 +2,7 @@ from torchvision.transforms import transforms
 
 
 def get_transforms(cfg, train: bool = False):
-    img_resize = (224, 224)
+    # img_resize = (224, 224)
 
     if train:
         # transforms_train = transforms.Compose([
@@ -14,9 +14,9 @@ def get_transforms(cfg, train: bool = False):
         #     transforms.RandomHorizontalFlip(),
         #     transforms.RandomAffine(degrees=10, translate=(0.1, 0.4), scale=(0.9, 1.0)),
         # ])
-    
+
         return transforms.Compose([
-            transforms.RandomResizedCrop(img_resize[0], scale=(0.6, 1.0)),
+            # transforms.RandomResizedCrop(cfg['img_size'], scale=(0.6, 1.0)),
             transforms.RandomApply(
                 [transforms.ColorJitter(0.4, 0.4, 0.4, 0.1)],
                 p=0.8,  # not strengthened
@@ -30,6 +30,6 @@ def get_transforms(cfg, train: bool = False):
 
     else:
         return transforms.Compose([
-            transforms.Resize(size=img_resize),
+            # transforms.Resize(size=img_resize),
             # transforms.ToTensor(),
         ])

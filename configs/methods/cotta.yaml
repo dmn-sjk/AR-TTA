@@ -1,0 +1,9 @@
+lr: 1.e-3
+model: resnet50
+beta: 0.9
+weight_decay: 0.
+steps: 1
+episodic: false
+mt: 0.999
+rst: 0.01
+ap: 0.92

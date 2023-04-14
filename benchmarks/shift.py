@@ -138,6 +138,7 @@ def _get_domains_mix_sets(cfg):
     
     transforms_test = get_transforms(cfg, train=False)
     
+    # source domain, but validation split
     val_sets.append(_SHIFTClassificationDataset(split='val',
                                                 data_root=cfg['data_root'],
                                                 transforms=transforms_test,

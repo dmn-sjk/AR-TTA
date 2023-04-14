@@ -26,12 +26,12 @@ def main():
 
         if i == 0:
             print("Initial eval...")
-            strategy.eval(benchmark.test_stream, num_workers=cfg['num_workers'])
+            strategy.eval(benchmark.test_stream[0], num_workers=cfg['num_workers'])
 
         strategy.train(experience, eval_streams=[], shuffle=False,
                        num_workers=cfg['num_workers'])
 
-        strategy.eval(benchmark.test_stream, num_workers=cfg['num_workers'])
+        strategy.eval(benchmark.test_stream[0], num_workers=cfg['num_workers'])
 
 
 if __name__ == '__main__':

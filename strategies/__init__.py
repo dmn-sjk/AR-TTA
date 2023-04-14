@@ -1,9 +1,6 @@
 from avalanche.training import Naive
 import torchvision
 import torch
-from avalanche.evaluation.metrics import accuracy_metrics, loss_metrics, amca_metrics
-from avalanche.logging import TextLogger, InteractiveLogger, WandBLogger
-from avalanche.training.plugins import EvaluationPlugin
 from avalanche.training import Naive
 
 from .frozen_strategy import get_frozen_strategy
@@ -24,6 +21,8 @@ def get_strategy(cfg):
 
     if cfg['pretrained_model_path'] is not None:
         model.load_state_dict(torch.load(cfg['pretrained_model_path']))
+        
+    model.to(cfg['device'])
 
     if cfg['watch_model']:
         eval_plugin = get_eval_plugin(cfg, model)
@@ -43,7 +42,9 @@ def get_strategy(cfg):
         strategy = get_tent_strategy(cfg, model, eval_plugin, plugins)
     elif cfg['method'] == "cotta":
         strategy = get_cotta_strategy(cfg, model, eval_plugin, plugins)
+    elif cfg['method'] == "eata":
+        raise NotImplementedError
     else:
-        raise ValueError("Unknown method")
+        raise ValueError(f"Unknown method: {cfg['method']}")
     
     return strategy
