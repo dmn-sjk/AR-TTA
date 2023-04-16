@@ -26,6 +26,7 @@ class ConfigParser:
         args = self._parse_args()
         cfg = self._read_config(args)
         cfg = self._overwrite_config_with_args(cfg, args)
+        print(cfg)
         return cfg
     
     def _read_config(self, args: argparse.Namespace) -> None:

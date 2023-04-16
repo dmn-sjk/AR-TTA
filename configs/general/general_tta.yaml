@@ -1,6 +1,5 @@
-# wandb
-run_name: tta
+run_name: reproduce
 
-benchmark: shift_mix
-lr: 0.01
-batch_size: 10
+benchmark: cifar10c_standard
+dataset: cifar10c
+batch_size: 200

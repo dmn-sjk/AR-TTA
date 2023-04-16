@@ -1,7 +1,7 @@
 from utils.transforms import get_transforms
 import torch
 import numpy as np
-from constants.cifar import SEVERITIES, CORRUPTIONS, LONG_DOMAINS_SEQ, REPETITIVE_DOMAINS_SEQ
+from constants.cifar import SEVERITIES, CORRUPTIONS, LONG_DOMAINS_SEQ, REPETITIVE_DOMAINS_SEQ, STANDARD_DOMAINS_SEQ
 import os
 from typing import Callable
 from avalanche.benchmarks.utils import (
@@ -30,7 +30,7 @@ class CIFAR10CDataset(torch.utils.data.Dataset):
                 raise ValueError("Severity level unavailable")
 
             if corruption not in CORRUPTIONS and corruption is not None:
-                raise ValueError("Unknown corruption")
+                raise ValueError(f"Unknown corruption: {corruption}")
             
             if corruption is None:
                 # uncorrupted test set
@@ -86,7 +86,9 @@ class CIFAR10CDataset(torch.utils.data.Dataset):
 def get_cifar10c_benchmark(cfg):
     train_sets = []
     val_sets = []
-    if cfg['benchmark'] == "cifar10c_long":
+    if cfg['benchmark'] == "cifar10c_standard":
+        corruptions = STANDARD_DOMAINS_SEQ
+    elif cfg['benchmark'] == "cifar10c_long":
         corruptions = LONG_DOMAINS_SEQ
     elif cfg['benchmark'] == "cifar10c_repetitive":
         corruptions = REPETITIVE_DOMAINS_SEQ

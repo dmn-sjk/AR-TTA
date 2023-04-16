@@ -8,4 +8,4 @@ cuda: 0
 num_workers: 5 
 log_dir: logs
 model_ckpt_dir: models_checkpoints
-pretrained_model_path: models_checkpoints/shift_c_resnet50.pth
+# pretrained_model_path: models_checkpoints/shift_c_resnet50.pth

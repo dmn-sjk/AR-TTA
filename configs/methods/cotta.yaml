@@ -1,5 +1,5 @@
 lr: 1.e-3
-model: resnet50
+model: wideresnet28
 beta: 0.9
 weight_decay: 0.
 steps: 1
