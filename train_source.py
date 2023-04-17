@@ -99,7 +99,8 @@ def main():
     model.to(device)
 
     optimizer = torch.optim.SGD(model.parameters(), lr=args.lr, momentum=0.9)
-    scheduler = ExponentialLR(optimizer, gamma=0.8)
+    # scheduler = ExponentialLR(optimizer, gamma=0.8)
+    scheduler = ExponentialLR(optimizer, gamma=0.92)
 
     if args.loss == "cross_entropy":
         criterion = torch.nn.CrossEntropyLoss()
