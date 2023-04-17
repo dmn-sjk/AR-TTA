@@ -70,8 +70,6 @@ class ConfigParser:
                             help='Whether to use cuda, -1 if not')
         parser.add_argument('--seed', type=int, default=argparse.SUPPRESS,
                             help='Random seed')
-        parser.add_argument('--store', action='store_true',
-                            help="If set the prediciton files required for submission will be created")
         parser.add_argument('--store_model', action='store_true',
                             help="Stores model if specified. Has no effect is store is not set")
         parser.add_argument('--wandb', action='store_true',

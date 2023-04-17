@@ -31,11 +31,17 @@ def get_tent_strategy(cfg, model: nn.Module, eval_plugin: EvaluationPlugin, plug
     # ----
     model = tent.configure_model(model)
     params, param_names = tent.collect_params(model)
-    # optimizer = torch.optim.SGD(params, lr=cfg['lr'])
-    optimizer = torch.optim.Adam(params,
-                                 lr=cfg['lr'],
-                                 betas=(cfg['beta'], 0.999),
-                                 weight_decay=cfg['weight_decay'])
+    
+    if cfg['optimizer'] == 'adam':
+        optimizer = torch.optim.Adam(params,
+                                    lr=cfg['lr'],
+                                    betas=(cfg['beta'], 0.999),
+                                    weight_decay=cfg['weight_decay'])
+    elif cfg['optimizer'] == 'sgd':
+        optimizer = torch.optim.SGD(params, lr=cfg['lr'])
+    else:
+        raise ValueError(f"Unknown optimizer: {cfg['optimizer']}")
+        
     tented_model = tent.Tent(model, optimizer)
     plugins.append(TentPlugin())
 

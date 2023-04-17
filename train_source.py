@@ -12,7 +12,7 @@ import wandb
 from torch.optim.lr_scheduler import ExponentialLR, LinearLR
 from tqdm import tqdm
 from utils.transforms import get_transforms
-from benchmarks.shift import _SHIFTClassificationDataset
+from benchmarks.shift import SHIFTClassificationDataset
 from shift_dev.types import WeathersCoarse, TimesOfDayCoarse
 from shift_dev.utils.backend import ZipBackend
 
@@ -69,10 +69,10 @@ def main():
     if args.seed is not None:
         set_seed(args.seed)
         
-    train_set = _SHIFTClassificationDataset(split='train', data_root=args.data_root, transforms=get_transforms(None, train=True),
+    train_set = SHIFTClassificationDataset(split='train', data_root=args.data_root, transforms=get_transforms(None, train=True),
                                             weathers_coarse=[WeathersCoarse.clear], timeofdays_coarse=[TimesOfDayCoarse.daytime],
                                             backend=ZipBackend())
-    val_set = _SHIFTClassificationDataset(split='val', data_root=args.data_root, transforms=get_transforms(None, train=False),
+    val_set = SHIFTClassificationDataset(split='val', data_root=args.data_root, transforms=get_transforms(None, train=False),
                                           weathers_coarse=[WeathersCoarse.clear], timeofdays_coarse=[TimesOfDayCoarse.daytime],
                                           backend=ZipBackend())
     

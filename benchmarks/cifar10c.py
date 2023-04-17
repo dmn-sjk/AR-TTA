@@ -13,7 +13,8 @@ from avalanche.benchmarks.scenarios.generic_benchmark_creation import create_mul
 
 class CIFAR10CDataset(torch.utils.data.Dataset):
     def __init__(self, data_root: str, corruption: str = None, 
-                 split: str = "test", severity: int = 5, transforms: Callable =  None):
+                 split: str = "test", severity: int = 5, 
+                 transforms: Callable =  None):
         self.dataset_path = os.path.join(data_root, "CIFAR-10-C")
         self.transforms = transforms
 
@@ -51,13 +52,15 @@ class CIFAR10CDataset(torch.utils.data.Dataset):
         path = os.path.join(self.dataset_path, self.sub_path1, self.sub_path2)
 
         data = np.load(os.path.join(path, self.data_filename))
+        targets = np.load(os.path.join(path, self.label_filename))
+        
         # change NHWC to NCHW format
         data = np.transpose(data, (0, 3, 1, 2))
         # make it compatible with our models (normalize)
         data = data.astype(np.float32) / 255.0
 
         self.images = torch.from_numpy(data)
-        self.targets = torch.from_numpy(np.load(os.path.join(path, self.label_filename)))
+        self.targets = torch.from_numpy(targets)
 
         self.dataset = torch.utils.data.TensorDataset(self.images,
                                                       self.targets)

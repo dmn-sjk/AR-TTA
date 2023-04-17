@@ -74,9 +74,12 @@ class CoTTA(nn.Module):
     def forward(self, x):
         if self.episodic:
             self.reset()
-
-        for _ in range(self.steps):
-            outputs = self.forward_and_adapt(x, self.model, self.optimizer)
+        
+        if self.adapt:
+            for _ in range(self.steps):
+                outputs = self.forward_and_adapt(x, self.model, self.optimizer)
+            else:
+                outputs = self.model_ema(x)
 
         return outputs
 
@@ -107,23 +110,22 @@ class CoTTA(nn.Module):
             outputs_ema = torch.stack(outputs_emas).mean(0)
         else:
             outputs_ema = standard_ema
-            
-        if self.adapt:
-            # Student update
-            loss = (softmax_entropy(outputs, outputs_ema)).mean(0) 
-            loss.backward()
-            optimizer.step()
-            optimizer.zero_grad()
-            # Teacher update
-            self.model_ema = update_ema_variables(ema_model = self.model_ema, model = self.model, alpha_teacher=self.mt)
-            # Stochastic restore
-            if True:
-                for nm, m  in self.model.named_modules():
-                    for npp, p in m.named_parameters():
-                        if npp in ['weight', 'bias'] and p.requires_grad:
-                            mask = (torch.rand(p.shape)<self.rst).float().cuda() 
-                            with torch.no_grad():
-                                p.data = self.model_state[f"{nm}.{npp}"] * mask + p * (1.-mask)
+
+        # Student update
+        loss = (softmax_entropy(outputs, outputs_ema)).mean(0) 
+        loss.backward()
+        optimizer.step()
+        optimizer.zero_grad()
+        # Teacher update
+        self.model_ema = update_ema_variables(ema_model = self.model_ema, model = self.model, alpha_teacher=self.mt)
+        # Stochastic restore
+        if True:
+            for nm, m  in self.model.named_modules():
+                for npp, p in m.named_parameters():
+                    if npp in ['weight', 'bias'] and p.requires_grad:
+                        mask = (torch.rand(p.shape)<self.rst).float().cuda() 
+                        with torch.no_grad():
+                            p.data = self.model_state[f"{nm}.{npp}"] * mask + p * (1.-mask)
         return outputs_ema
 
 

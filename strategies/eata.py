@@ -39,13 +39,23 @@ class EATA(nn.Module):
         # then skipping the state copy would save memory
         self.model_state, self.optimizer_state = \
             copy_model_and_optimizer(self.model, self.optimizer)
+            
+        self.adapt = True
 
     def forward(self, x):
         if self.episodic:
             self.reset()
-        if self.steps > 0:
+        if self.steps > 0 and self.adapt:
             for _ in range(self.steps):
-                outputs, num_counts_2, num_counts_1, updated_probs = forward_and_adapt_eata(x, self.model, self.optimizer, self.fishers, self.e_margin, self.current_model_probs, fisher_alpha=self.fisher_alpha, num_samples_update=self.num_samples_update_2, d_margin=self.d_margin)
+                outputs, num_counts_2, num_counts_1, updated_probs = forward_and_adapt_eata(x, 
+                                                                                            self.model, 
+                                                                                            self.optimizer, 
+                                                                                            self.fishers, 
+                                                                                            self.e_margin, 
+                                                                                            self.current_model_probs, 
+                                                                                            fisher_alpha=self.fisher_alpha, 
+                                                                                            num_samples_update=self.num_samples_update_2, 
+                                                                                            d_margin=self.d_margin)
                 self.num_samples_update_2 += num_counts_2
                 self.num_samples_update_1 += num_counts_1
                 self.reset_model_probs(updated_probs)
@@ -78,7 +88,8 @@ def softmax_entropy(x: torch.Tensor) -> torch.Tensor:
 
 
 @torch.enable_grad()  # ensure grads in possible no grad context for testing
-def forward_and_adapt_eata(x, model, optimizer, fishers, e_margin, current_model_probs, fisher_alpha=50.0, d_margin=0.05, scale_factor=2, num_samples_update=0):
+def forward_and_adapt_eata(x, model, optimizer, fishers, e_margin, current_model_probs, 
+                           fisher_alpha=50.0, d_margin=0.05, scale_factor=2, num_samples_update=0, adapt=True):
     """Forward and adapt model on batch of data.
     Measure entropy of the model prediction, take gradients, and update params.
     Return: 

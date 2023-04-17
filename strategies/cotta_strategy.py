@@ -11,10 +11,17 @@ from strategies.frozen_strategy import FrozenModel
 def get_cotta_strategy(cfg, model: torch.nn.Module, eval_plugin: EvaluationPlugin, plugins: Sequence):
     model = cotta.configure_model(model)
     params, param_names = cotta.collect_params(model)
-    optimizer = torch.optim.Adam(params,
-                                 lr=cfg['lr'],
-                                 betas=(cfg['beta'], 0.999),
-                                 weight_decay=cfg['weight_decay'])
+
+    if cfg['optimizer'] == 'adam':
+        optimizer = torch.optim.Adam(params,
+                                    lr=cfg['lr'],
+                                    betas=(cfg['beta'], 0.999),
+                                    weight_decay=cfg['weight_decay'])
+    elif cfg['optimizer'] == 'sgd':
+        optimizer = torch.optim.SGD(params, lr=cfg['lr'])
+    else:
+        raise ValueError(f"Unknown optimizer: {cfg['optimizer']}")
+
     cotted_model = cotta.CoTTA(model, optimizer,
                        steps=cfg['steps'],
                        episodic=cfg['episodic'],

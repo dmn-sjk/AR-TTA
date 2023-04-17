@@ -28,8 +28,11 @@ class Tent(nn.Module):
         if self.episodic:
             self.reset()
 
-        for _ in range(self.steps):
-            outputs = forward_and_adapt(x, self.model, self.optimizer, self.adapt)
+        if self.adapt:
+            for _ in range(self.steps):
+                outputs = forward_and_adapt(x, self.model, self.optimizer, self.adapt)
+        else:
+            outputs = self.model(x)
 
         return outputs
 
@@ -47,20 +50,19 @@ def softmax_entropy(x: torch.Tensor) -> torch.Tensor:
 
 
 @torch.enable_grad()  # ensure grads in possible no grad context for testing
-def forward_and_adapt(x, model, optimizer, adapt: bool = True):
+def forward_and_adapt(x, model, optimizer):
     """Forward and adapt model on batch of data.
 
     Measure entropy of the model prediction, take gradients, and update params.
     """
     # forward
     outputs = model(x)
-    
-    if adapt:
-        # adapt
-        loss = softmax_entropy(outputs).mean(0)
-        loss.backward()
-        optimizer.step()
-        optimizer.zero_grad()
+
+    # adapt
+    loss = softmax_entropy(outputs).mean(0)
+    loss.backward()
+    optimizer.step()
+    optimizer.zero_grad()
     return outputs
 
 

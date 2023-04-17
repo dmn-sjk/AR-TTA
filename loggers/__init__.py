@@ -6,6 +6,7 @@ from avalanche.evaluation.metrics import accuracy_metrics, loss_metrics, amca_me
 from avalanche.training.plugins import EvaluationPlugin
 from torch.nn import Module
 import os
+import yaml
 
 
 def get_eval_plugin(cfg, model: Module = None):
@@ -21,6 +22,9 @@ def get_eval_plugin(cfg, model: Module = None):
 
     if cfg['save_results']:
         loggers.append(JSONLogger(open(path_to_log_file + '.json', 'w')))
+        # save config
+        with open(os.path.join(experiment_folder, experiment_name + '_config') + '.yaml', 'w') as f:
+            yaml.dump(cfg, f, default_flow_style=False)
 
     if cfg['wandb']:
         if model is not None:
