@@ -13,6 +13,7 @@ from torch.optim.lr_scheduler import ExponentialLR, LinearLR
 from tqdm import tqdm
 from utils.transforms import get_transforms
 from benchmarks.shift import SHIFTClassificationDataset
+from benchmarks.cifar10c import CIFAR10CDataset
 from shift_dev.types import WeathersCoarse, TimesOfDayCoarse
 from shift_dev.utils.backend import ZipBackend
 
@@ -69,12 +70,15 @@ def main():
     if args.seed is not None:
         set_seed(args.seed)
         
-    train_set = SHIFTClassificationDataset(split='train', data_root=args.data_root, transforms=get_transforms(None, train=True),
-                                            weathers_coarse=[WeathersCoarse.clear], timeofdays_coarse=[TimesOfDayCoarse.daytime],
-                                            backend=ZipBackend())
-    val_set = SHIFTClassificationDataset(split='val', data_root=args.data_root, transforms=get_transforms(None, train=False),
-                                          weathers_coarse=[WeathersCoarse.clear], timeofdays_coarse=[TimesOfDayCoarse.daytime],
-                                          backend=ZipBackend())
+    # train_set = SHIFTClassificationDataset(split='train', data_root=args.data_root, transforms=get_transforms(None, train=True),
+    #                                         weathers_coarse=[WeathersCoarse.clear], timeofdays_coarse=[TimesOfDayCoarse.daytime],
+    #                                         backend=ZipBackend())
+    # val_set = SHIFTClassificationDataset(split='val', data_root=args.data_root, transforms=get_transforms(None, train=False),
+    #                                       weathers_coarse=[WeathersCoarse.clear], timeofdays_coarse=[TimesOfDayCoarse.daytime],
+    #                                       backend=ZipBackend())
+    
+    train_set = CIFAR10CDataset(args.data_root, corruption=None, split='train', transforms=get_transforms(None, train=True))
+    val_set = CIFAR10CDataset(args.data_root, corruption=None, split='test', transforms=get_transforms(None, train=False))
     
     train_loader = DataLoader(train_set, batch_size=args.batch_size, num_workers=args.num_workers, shuffle=True)
     val_loader = DataLoader(val_set, batch_size=args.batch_size, num_workers=args.num_workers, shuffle=True)
@@ -89,7 +93,8 @@ def main():
         raise ValueError(f"Unknown model name: {args.model}")
 
     # model.fc = Linear(model.fc.in_features, len(clad.SODA_CATEGORIES), bias=True)
-    model.fc = Linear(model.fc.in_features, len(train_set.classes), bias=True)
+    # model.fc = Linear(model.fc.in_features, len(train_set.classes), bias=True)
+    model.fc = Linear(model.fc.in_features, 10, bias=True)
 
     model.to(device)
 
@@ -109,7 +114,7 @@ def main():
         os.makedirs(models_path)
 
     if args.wandb:
-        wandb.init(config=args, project=args.project_name, group="shift_c",
+        wandb.init(config=args, project=args.project_name, group="cifar10",
                    name=f"{args.run_name}_{args.model}", job_type=f"{args.run_name}_{args.model}")
 
     # train_set = clad.get_cladc_train(args.root, transform=get_transforms(None, train=True))[0]
