@@ -62,7 +62,7 @@ class ConfigParser:
                             help='Name of the run')
         parser.add_argument('--pretrained_model_path', type=str, default=argparse.SUPPRESS,
                             help='Name of the run')
-        parser.add_argument('--data_root', default=argparse.SUPPRESS,
+        parser.add_argument('--data_root', type=str, default=argparse.SUPPRESS,
                             help='Root folder where the data is stored')
         parser.add_argument('--num_workers', type=int, default=argparse.SUPPRESS,
                             help='Num workers to use for dataloading')
@@ -70,6 +70,8 @@ class ConfigParser:
                             help='Whether to use cuda, -1 if not')
         parser.add_argument('--seed', type=int, default=argparse.SUPPRESS,
                             help='Random seed')
+        parser.add_argument('--batch_size', type=int, default=argparse.SUPPRESS,
+                            help="Log to .txt")
         parser.add_argument('--store_model', action='store_true',
                             help="Stores model if specified. Has no effect is store is not set")
         parser.add_argument('--wandb', action='store_true',
@@ -79,7 +81,7 @@ class ConfigParser:
         parser.add_argument('--save_results', action='store_true',
                             help="Log to .txt")
         parser.add_argument('--watch_model', action='store_true',
-                            help="Log to .txt")
+                            help="Log model state in wandb")
         return parser.parse_args()
 
     def _overwrite_config_with_args(self, config: Dict, args: argparse.Namespace) -> Dict:
