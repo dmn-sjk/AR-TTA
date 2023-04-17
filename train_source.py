@@ -184,7 +184,7 @@ def main():
 
                 if avg_vloss < best_loss:
                     torch.save(model.state_dict(),
-                               os.path.join(models_path, f"shift_c_{args.model}.pth"))
+                               os.path.join(models_path, f"cifar10_{args.model}.pth"))
                     best_loss = avg_vloss
 
     if args.wandb:

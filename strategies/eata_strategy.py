@@ -7,12 +7,26 @@ import torch
 import strategies.eata as eata
 from strategies.frozen_strategy import FrozenModel
 from benchmarks.cifar10c import CIFAR10CDataset
+from benchmarks.shift import SHIFTClassificationDataset
+from shift_dev.types import WeathersCoarse, TimesOfDayCoarse
+from shift_dev.utils.backend import ZipBackend
 
 
 def get_eata_strategy(cfg, model: torch.nn.Module, eval_plugin: EvaluationPlugin, plugins: Sequence):
     fisher_batch_size = 64
     if cfg['dataset'] == 'cifar10c':
         fisher_dataset = CIFAR10CDataset(cfg['data_root'], corruption=None, split='test', transforms=None)
+        fisher_loader = torch.utils.data.DataLoader(fisher_dataset, batch_size=fisher_batch_size, shuffle=True, 
+                                                    num_workers=cfg['num_workers'], pin_memory=True)
+    elif cfg['dataset'] == 'shift':
+        fisher_dataset = SHIFTClassificationDataset(split='val',
+                                                    data_root=cfg['data_root'],
+                                                    transforms=None,
+                                                    weathers_coarse=[WeathersCoarse.clear],
+                                                    timeofdays_coarse=[
+                                                        TimesOfDayCoarse.daytime],
+                                                    backend=ZipBackend(),
+                                                    classification_img_size=cfg['img_size'])
         fisher_loader = torch.utils.data.DataLoader(fisher_dataset, batch_size=fisher_batch_size, shuffle=True, 
                                                     num_workers=cfg['num_workers'], pin_memory=True)
     else:
