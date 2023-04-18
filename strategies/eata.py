@@ -89,7 +89,7 @@ def softmax_entropy(x: torch.Tensor) -> torch.Tensor:
 
 @torch.enable_grad()  # ensure grads in possible no grad context for testing
 def forward_and_adapt_eata(x, model, optimizer, fishers, e_margin, current_model_probs, 
-                           fisher_alpha=50.0, d_margin=0.05, scale_factor=2, num_samples_update=0, adapt=True):
+                           fisher_alpha=50.0, d_margin=0.05, scale_factor=2, num_samples_update=0):
     """Forward and adapt model on batch of data.
     Measure entropy of the model prediction, take gradients, and update params.
     Return: 

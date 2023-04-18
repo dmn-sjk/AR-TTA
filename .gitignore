@@ -6,3 +6,4 @@ logs
 .vscode
 .env
 source_dirs.sh
+results
