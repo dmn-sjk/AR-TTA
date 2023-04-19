@@ -1,5 +1,3 @@
-run_name: reproduce
-
 benchmark: cifar10c_standard
 dataset: cifar10c
 batch_size: 10

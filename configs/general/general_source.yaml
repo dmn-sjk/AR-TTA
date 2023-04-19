@@ -2,6 +2,7 @@
 run_name: source_train
 
 model: resnet50
-dataset: shift
 lr: 0.01
 batch_size: 64
+num_epochs: 40
+scheduler_gamma: 0.85

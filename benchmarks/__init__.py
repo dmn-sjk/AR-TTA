@@ -41,10 +41,6 @@ if __name__ == "__main__":
         fig.tight_layout(pad=2.0)
         plt.show()
 
-    # cfg = {}
-    # cfg['data_root'] = "/home/damian/Documents/datasets"
-    # cfg['benchmark'] = "clad"
-    # cfg['benchmark_corruptions'] = CORRUPTIONS[1], CORRUPTIONS[3], CORRUPTIONS[2]
     cfg = ConfigParser(mode="tta").get_config()
     
     benchmark = get_benchmark(cfg)

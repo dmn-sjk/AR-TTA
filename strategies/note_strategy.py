@@ -1,4 +1,5 @@
 
 
 def get_note_strategy():
-    pass
+    # TODO:
+    raise NotImplementedError

@@ -1,9 +1,4 @@
-import clad
-
-import random
-import numpy as np
 import torch
-import argparse
 from torchvision import models
 from torch.nn import Linear
 from torch.utils.data import DataLoader
@@ -11,126 +6,87 @@ import os
 import wandb
 from torch.optim.lr_scheduler import ExponentialLR, LinearLR
 from tqdm import tqdm
+
+
 from utils.transforms import get_transforms
-from benchmarks.shift import SHIFTClassificationDataset
-from benchmarks.cifar10c import CIFAR10CDataset
+from utils.config_parser import ConfigParser
+from utils.utils import set_seed
+from datasets.shift import SHIFTClassificationDataset
+from datasets.cifar10c import CIFAR10CDataset
+import clad
 from shift_dev.types import WeathersCoarse, TimesOfDayCoarse
 from shift_dev.utils.backend import ZipBackend
 
-# TODO: whole file copied, rewrite properly
-
-def set_seed(seed):
-    random.seed(seed)
-    np.random.seed(seed)
-    torch.manual_seed(seed)
-
-    if hasattr(torch, "set_deterministic"):
-        torch.set_deterministic(True)
-    torch.backends.cudnn.benchmark = False
-    torch.backends.cudnn.deterministic = True
-
-
-def setup_parser_and_get_args():
-    parser = argparse.ArgumentParser()
-    parser.add_argument('--project_name', type=str, default='Continual adaptation',
-                        help='Name of the run')
-    parser.add_argument('--run_name', type=str, default='source_training',
-                        help='Name of the run')
-    parser.add_argument('--model', type=str, default='resnet50',
-                        help='Name of the run')
-    parser.add_argument('--data_root', default="/home/damian/Documents/datasets/",
-                        help='Root folder where the data is stored')
-    parser.add_argument('--num_workers', type=int, default=5,
-                        help='Num workers to use for dataloading')
-    parser.add_argument('--cuda', type=int, default=0,
-                        help='Whether to use cuda, -1 if not')
-    parser.add_argument('--seed', type=int, default=1234,
-                        help='Random seed')
-    parser.add_argument('--wandb', action='store_true',
-                        help="Log with wandb")
-    parser.add_argument('--batch_size', type=int, default=64,
-                        help="Log with wandb")
-    parser.add_argument('--epochs', type=int, default=15,
-                        help='Random seed')
-    parser.add_argument('--lr', type=float, default=1e-2,
-                        help='Random seed')
-    parser.add_argument('--loss', type=str, default='cross_entropy',
-                        help='Name of the run')
-    return parser.parse_args()
-
 
 def main():
-    args = setup_parser_and_get_args()
+    cfg = ConfigParser(mode="source").get_config()
 
-    device = torch.device(f"cuda:{args.cuda}"
-                          if torch.cuda.is_available() and args.cuda >= 0
-                          else "cpu"
-                          )
-
-    if args.seed is not None:
-        set_seed(args.seed)
+    cfg['device'] = torch.device(f"cuda:{cfg['cuda']}"
+                                 if torch.cuda.is_available() and cfg['cuda'] >= 0
+                                 else "cpu")
+    
+    if cfg['seed'] is not None:
+        set_seed(cfg['seed'])
         
-    # train_set = SHIFTClassificationDataset(split='train', data_root=args.data_root, transforms=get_transforms(None, train=True),
-    #                                         weathers_coarse=[WeathersCoarse.clear], timeofdays_coarse=[TimesOfDayCoarse.daytime],
-    #                                         backend=ZipBackend())
-    # val_set = SHIFTClassificationDataset(split='val', data_root=args.data_root, transforms=get_transforms(None, train=False),
-    #                                       weathers_coarse=[WeathersCoarse.clear], timeofdays_coarse=[TimesOfDayCoarse.daytime],
-    #                                       backend=ZipBackend())
-    
-    train_set = CIFAR10CDataset(args.data_root, corruption=None, split='train', transforms=get_transforms(None, train=True))
-    val_set = CIFAR10CDataset(args.data_root, corruption=None, split='test', transforms=get_transforms(None, train=False))
-    
-    train_loader = DataLoader(train_set, batch_size=args.batch_size, num_workers=args.num_workers, shuffle=True)
-    val_loader = DataLoader(val_set, batch_size=args.batch_size, num_workers=args.num_workers, shuffle=True)
+    train_transform = get_transforms(cfg, train=True)
+    val_transform = get_transforms(cfg, train=False)
 
-    if args.model == 'resnet18':
+    if cfg['dataset'] == 'shift':
+        train_set = SHIFTClassificationDataset(split='train', data_root=cfg['data_root'], transforms=train_transform,
+                                                weathers_coarse=[WeathersCoarse.clear], timeofdays_coarse=[TimesOfDayCoarse.daytime],
+                                                backend=ZipBackend())
+        val_set = SHIFTClassificationDataset(split='val', data_root=cfg['data_root'], transforms=val_transform,
+                                            weathers_coarse=[WeathersCoarse.clear], timeofdays_coarse=[TimesOfDayCoarse.daytime],
+                                            backend=ZipBackend())
+    elif cfg['dataset'] == 'cifar10c':
+        train_set = CIFAR10CDataset(cfg['data_root'], corruption=None, split='train', transforms=train_transform)
+        val_set = CIFAR10CDataset(cfg['data_root'], corruption=None, split='test', transforms=val_transform)
+    elif cfg['dataset'] == 'clad':
+        train_set = clad.get_cladc_train(cfg['data_root'], transform=train_transform, img_size=cfg['img_size'], sequence_type='source')[0]
+        # TODO: for now val set has all the domains, modify for only daytime and depending on the possibilities match the weather with train set 
+        val_set = clad.get_cladc_val(cfg['data_root'], transform=val_transform)
+    else:
+        raise ValueError(f"Unknown dataset: {cfg['dataset']}")
+    
+    train_loader = DataLoader(train_set, batch_size=cfg['batch_size'], num_workers=cfg['num_workers'], shuffle=True)
+    val_loader = DataLoader(val_set, batch_size=cfg['batch_size'], num_workers=cfg['num_workers'], shuffle=True)
+
+    if cfg['model'] == 'resnet18':
         model = models.resnet18(weights=models.ResNet18_Weights.DEFAULT)
-    elif args.model == 'resnet50':
+    elif cfg['model'] == 'resnet50':
         model = models.resnet50(weights=models.ResNet50_Weights.DEFAULT)
-    elif args.model == 'resnet101':
+    elif cfg['model'] == 'resnet101':
         model = models.resnet101(weights=models.ResNet101_Weights.DEFAULT)
     else:
-        raise ValueError(f"Unknown model name: {args.model}")
+        raise ValueError(f"Unknown model name: {cfg['model']}")
 
-    # model.fc = Linear(model.fc.in_features, len(clad.SODA_CATEGORIES), bias=True)
-    # model.fc = Linear(model.fc.in_features, len(train_set.classes), bias=True)
-    model.fc = Linear(model.fc.in_features, 10, bias=True)
+    model.fc = Linear(model.fc.in_features, cfg['num_classes'], bias=True)
 
-    model.to(device)
+    if 'pretrained_model_path' in cfg.keys():
+        model.load_state_dict(torch.load(cfg['pretrained_model_path']))
 
-    optimizer = torch.optim.SGD(model.parameters(), lr=args.lr, momentum=0.9)
-    # scheduler = ExponentialLR(optimizer, gamma=0.8)
-    scheduler = ExponentialLR(optimizer, gamma=0.92)
+    model.to(cfg['device'])
 
-    if args.loss == "cross_entropy":
-        criterion = torch.nn.CrossEntropyLoss()
-    elif args.loss == "triplet_loss":
-        raise NotImplementedError()
-        # TODO
-    else:
-        raise ValueError(f"Unknown loss type: {args.loss}")
+    optimizer = torch.optim.SGD(model.parameters(), lr=cfg['lr'], momentum=0.9)
+    scheduler = ExponentialLR(optimizer, gamma=cfg['scheduler_gamma'])
+    criterion = torch.nn.CrossEntropyLoss()
 
     models_path = "models_checkpoints"
     if not os.path.isdir(models_path):
         os.makedirs(models_path)
 
-    if args.wandb:
-        wandb.init(config=args, project=args.project_name, group="cifar10",
-                   name=f"{args.run_name}_{args.model}", job_type=f"{args.run_name}_{args.model}")
-
-    # train_set = clad.get_cladc_train(args.root, transform=get_transforms(None, train=True))[0]
-    # val_set = clad.get_cladc_val(args.root, transform=get_transforms(None, train=False))
+    if cfg['wandb']:
+        wandb.init(config=cfg, project=cfg['project_name'], group=cfg['dataset'],
+                   name=f"{cfg['model']}_{cfg['run_name']}", job_type=f"{cfg['model']}_{cfg['run_name']}")
 
     EVAL_EVERY_EPOCHS = 1
 
     best_loss = 1e6
-    for epoch in range(args.epochs):
-        # loss_sum = 0
-        # acc_sum = 0
+    for epoch in range(cfg['num_epochs']):
         model.train()
         last_lr = scheduler.get_last_lr()[-1]
 
-        if args.wandb:
+        if cfg['wandb']:
             wandb.log({"lr": last_lr}, step=epoch * len(train_loader))
 
         with tqdm(enumerate(train_loader), unit="batch", total=len(train_loader)) as tepoch:
@@ -138,7 +94,7 @@ def main():
                 tepoch.set_description(f"Epoch {epoch}")
 
                 inputs, targets = data
-                inputs, targets = inputs.to(device), targets.to(device)
+                inputs, targets = inputs.to(cfg['device']), targets.to(cfg['device'])
 
                 optimizer.zero_grad()
                 outputs = model(inputs)
@@ -148,7 +104,7 @@ def main():
 
                 acc = (torch.argmax(outputs, dim=-1) ==
                        targets).float().mean().item() * 100.0
-                if args.wandb:
+                if cfg['wandb']:
                     wandb.log({'train_accuracy': acc, 'train_loss': loss.item()},
                               step=epoch*len(train_loader) + i)
 
@@ -164,7 +120,7 @@ def main():
             with torch.no_grad():
                 for i, data in enumerate(tqdm(val_loader, desc="Validating:")):
                     inputs, targets = data
-                    inputs, targets = inputs.to(device), targets.to(device)
+                    inputs, targets = inputs.to(cfg['device']), targets.to(cfg['device'])
                     outputs = model(inputs)
                     loss = criterion(outputs, targets)
 
@@ -179,16 +135,16 @@ def main():
                 print(
                     f"Val accuracy: {avg_vacc:.2f}\nVal loss: {avg_vloss:.4f}")
 
-                if args.wandb:
+                if cfg['wandb']:
                     wandb.log({'val_accuracy': avg_vacc, 'val_loss': avg_vloss},
                               step=(epoch + 1) * len(train_loader))
 
                 if avg_vloss < best_loss:
                     torch.save(model.state_dict(),
-                               os.path.join(models_path, f"cifar10_{args.model}.pth"))
+                               os.path.join(models_path, f"{cfg['dataset']}_{cfg['model']}_{cfg['run_name']}.pth"))
                     best_loss = avg_vloss
 
-    if args.wandb:
+    if cfg['wandb']:
         wandb.finish()
 
 
