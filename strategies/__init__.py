@@ -47,12 +47,9 @@ def get_strategy(cfg):
     if cfg['method'] == "finetune":
         optimizer = torch.optim.SGD(model.parameters(), lr=cfg['lr'])
         criterion = torch.nn.CrossEntropyLoss()
-        # strategy = Naive(
-        #     model, optimizer, criterion, train_mb_size=cfg['batch_size'], train_epochs=1, eval_mb_size=128,
-        #     device=cfg['device'], evaluator=eval_plugin, plugins=plugins, eval_every=-1)
-        
-        strategy = OnlineNaive(model, optimizer, criterion, train_passes=1, train_mb_size=cfg['batch_size'], 
-                               eval_mb_size=128, device=cfg['device'], evaluator=eval_plugin, plugins=plugins, eval_every=-1)
+        strategy = Naive(
+            model, optimizer, criterion, train_mb_size=cfg['batch_size'], train_epochs=1, eval_mb_size=128,
+            device=cfg['device'], evaluator=eval_plugin, plugins=plugins, eval_every=-1)
         
     elif cfg['method'] == "frozen":
         strategy = get_frozen_strategy(cfg, model, eval_plugin, plugins)

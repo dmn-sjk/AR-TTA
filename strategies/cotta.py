@@ -78,8 +78,8 @@ class CoTTA(nn.Module):
         if self.adapt:
             for _ in range(self.steps):
                 outputs = self.forward_and_adapt(x, self.model, self.optimizer)
-            else:
-                outputs = self.model_ema(x)
+        else:
+            outputs = self.model_ema(x)
 
         return outputs
 
@@ -100,7 +100,7 @@ class CoTTA(nn.Module):
         anchor_prob = torch.nn.functional.softmax(self.model_anchor(x), dim=1).max(1)[0]
         standard_ema = self.model_ema(x)
         # Augmentation-averaged Prediction
-        N = 32 
+        N = 32
         outputs_emas = []
         for i in range(N):
             outputs_  = self.model_ema(self.transform(x)).detach()

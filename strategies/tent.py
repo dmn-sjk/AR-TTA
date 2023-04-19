@@ -30,7 +30,7 @@ class Tent(nn.Module):
 
         if self.adapt:
             for _ in range(self.steps):
-                outputs = forward_and_adapt(x, self.model, self.optimizer, self.adapt)
+                outputs = forward_and_adapt(x, self.model, self.optimizer)
         else:
             outputs = self.model(x)
 

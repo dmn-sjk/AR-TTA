@@ -92,3 +92,50 @@ class EATAPlugin(SupervisedPlugin):
 
     def before_eval(self, strategy: "SupervisedTemplate", **kwargs):
         strategy.model.adapt = False
+
+
+class OnlineEWCPlugin(SupervisedPlugin):
+    def __init__(self):
+        # TODO
+        raise NotImplementedError
+        super().__init__()
+        self.logsoft = torch.nn.LogSoftmax(dim=1)
+        self.checkpoint = None
+        self.fish = None
+        
+    def after_update(self, strategy: "SupervisedTemplate", **kwargs):
+        # current models outputs
+        outputs = strategy.mb_output
+        
+        # current mini batch
+        _, labels, _ = strategy.mbatch
+        
+        for output, label in zip (outputs, labels):
+            strategy.model.optimizer.zero_grad()
+            loss = - torch.nn.functional.nll_loss(self.logsoft(output), label.unsqueeze(0),
+                                reduction='none')
+            exp_cond_prob = torch.mean(torch.exp(loss.detach().clone()))
+            loss = torch.mean(loss)
+            loss.backward()
+            self.updated_fish += exp_cond_prob * self.net.get_grads() ** 2
+
+
+            # for name, param in strategy.model.named_parameters():
+            #     if param.grad is not None:
+            #         if iter_ > 1:
+            #             fisher = param.grad.data.clone().detach() ** 2 + fishers[name][0]
+            #         else:
+            #             fisher = param.grad.data.clone().detach() ** 2
+            #         if iter_ == len(fisher_loader):
+            #             fisher = fisher / iter_
+            #         fishers.update({name: [fisher, param.data.clone().detach()]})
+            # ewc_optimizer.zero_grad()
+
+    def before_training(self, strategy: "SupervisedTemplate", **kwargs):
+        self.updated_fish = torch.zeros_like(strategy.model.get_params())
+        
+    def after_training(self, strategy: "SupervisedTemplate", **kwargs):
+        self.updated_fish /= (len(strategy.dataloader) * strategy.dataloader.batch_size)
+
+        self.fish *= self.args.gamma
+        self.fish += self.updated_fish
