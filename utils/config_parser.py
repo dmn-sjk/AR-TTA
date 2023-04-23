@@ -84,7 +84,7 @@ class ConfigParser:
                             help="Log to .txt")
         parser.add_argument('--num_epochs', type=int, default=argparse.SUPPRESS,
                             help="Log to .txt")
-        parser.add_argument('--scheduler_gamma', type=int, default=argparse.SUPPRESS,
+        parser.add_argument('--scheduler_gamma', type=float, default=argparse.SUPPRESS,
                             help="Log to .txt")
         parser.add_argument('--store_model', action='store_true',
                             help="Stores model if specified. Has no effect is store is not set")
