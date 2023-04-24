@@ -16,42 +16,66 @@ def _get_weather_sets(cfg):
     val_sets = []
     
     transforms_test = get_transforms(cfg, train=False)
+    
+    # source domain, but validation split
+    val_sets.append(SHIFTClassificationDataset(split='val',
+                                                data_root=cfg['data_root'],
+                                                transforms=transforms_test,
+                                                weathers_coarse=[WeathersCoarse.clear],
+                                                timeofdays_coarse=[TimesOfDayCoarse.daytime],
+                                                backend=ZipBackend(),
+                                                classification_img_size=cfg['img_size']))
+    print(f"{WeathersCoarse.clear.capitalize()} weather {TimesOfDayCoarse.daytime} time data val split size: {len(val_sets[-1])}")
+    
+    domains = []
 
     for weather in WEATHERS_SEQUENCE:
-        print(
-            f"Loading {weather} weather {TimesOfDayCoarse.daytime} time of day data...")
+        print(f"Loading {weather} weather {TimesOfDayCoarse.daytime} time of day data...")
 
         train_sets.append(SHIFTClassificationDataset(split='train',
                                         data_root=cfg['data_root'],
                                         transforms=transforms_test,
                                         weathers_coarse=[weather],
-                                        timeofdays_coarse=[
-                                            TimesOfDayCoarse.daytime],
+                                        timeofdays_coarse=[TimesOfDayCoarse.daytime],
                                         backend=ZipBackend(),
                                         classification_img_size=cfg['img_size']))
-        print(
-            f"{weather} weather {TimesOfDayCoarse.daytime} time data train split size: {len(train_sets[-1])}")
+        print(f"{weather.capitalize()} weather {TimesOfDayCoarse.daytime} time data train split size: {len(train_sets[-1])}")
 
-        val_sets.append(SHIFTClassificationDataset(split='val',
-                                            data_root=cfg['data_root'],
-                                            transforms=transforms_test,
-                                            weathers_coarse=[weather],
-                                            timeofdays_coarse=[
-                                                TimesOfDayCoarse.daytime],
-                                            backend=ZipBackend(),
-                                            classification_img_size=cfg['img_size']))
-        print(
-            f"{weather} weather {TimesOfDayCoarse.daytime} time data val split size: {len(val_sets[-1])}")
-    return train_sets, val_sets
+        # val_sets.append(SHIFTClassificationDataset(split='val',
+        #                                     data_root=cfg['data_root'],
+        #                                     transforms=transforms_test,
+        #                                     weathers_coarse=[weather],
+        #                                     timeofdays_coarse=[
+        #                                         TimesOfDayCoarse.daytime],
+        #                                     backend=ZipBackend(),
+        #                                     classification_img_size=cfg['img_size']))
+        # print(
+        #     f"{weather.capitalize()} weather {TimesOfDayCoarse.daytime} time data val split size: {len(val_sets[-1])}")
+        
+        domains.append(f"{TimesOfDayCoarse.daytime}_{weather}")
+        
+    return train_sets, val_sets, domains
 
 def _get_timeofday_sets(cfg):
     train_sets = []
     val_sets = []
     
     transforms_test = get_transforms(cfg, train=False)
+    
+    # source domain, but validation split
+    val_sets.append(SHIFTClassificationDataset(split='val',
+                                                data_root=cfg['data_root'],
+                                                transforms=transforms_test,
+                                                weathers_coarse=[WeathersCoarse.clear],
+                                                timeofdays_coarse=[TimesOfDayCoarse.daytime],
+                                                backend=ZipBackend(),
+                                                classification_img_size=cfg['img_size']))
+    print(f"{WeathersCoarse.clear.capitalize()} weather {TimesOfDayCoarse.daytime} time data val split size: {len(val_sets[-1])}")
+    
+    domains = []
 
     for timeofday in TIMEOFDAY_SEQUENCE:
-        print(f"Loading {WeathersCoarse.clear} weather {timeofday} time of day data...")
+        print(f"Loading {WeathersCoarse.clear.capitalize()} weather {timeofday} time of day data...")
 
         train_sets.append(SHIFTClassificationDataset(split='train',
                                         data_root=cfg['data_root'],
@@ -60,17 +84,20 @@ def _get_timeofday_sets(cfg):
                                         timeofdays_coarse=[timeofday],
                                         backend=ZipBackend(),
                                         classification_img_size=cfg['img_size']))
-        print(f"{WeathersCoarse.clear} weather {timeofday} time data train split size: {len(train_sets[-1])}")
+        print(f"{WeathersCoarse.clear.capitalize()} weather {timeofday} time data train split size: {len(train_sets[-1])}")
 
-        val_sets.append(SHIFTClassificationDataset(split='val',
-                                            data_root=cfg['data_root'],
-                                            transforms=transforms_test,
-                                            weathers_coarse=[WeathersCoarse.clear],
-                                            timeofdays_coarse=[timeofday],
-                                            backend=ZipBackend(),
-                                            classification_img_size=cfg['img_size']))
-        print(f"{WeathersCoarse.clear} weather {timeofday} time data val split size: {len(val_sets[-1])}")
-    return train_sets, val_sets
+        # val_sets.append(SHIFTClassificationDataset(split='val',
+        #                                     data_root=cfg['data_root'],
+        #                                     transforms=transforms_test,
+        #                                     weathers_coarse=[WeathersCoarse.clear],
+        #                                     timeofdays_coarse=[timeofday],
+        #                                     backend=ZipBackend(),
+        #                                     classification_img_size=cfg['img_size']))
+        # print(f"{WeathersCoarse.clear} weather {timeofday} time data val split size: {len(val_sets[-1])}")
+
+        domains.append(f"{timeofday}_{WeathersCoarse.clear}")
+        
+    return train_sets, val_sets, domains
 
 def _get_domains_mix_sets(cfg):
     train_sets = []
@@ -86,13 +113,12 @@ def _get_domains_mix_sets(cfg):
                                                 timeofdays_coarse=[TimesOfDayCoarse.daytime],
                                                 backend=ZipBackend(),
                                                 classification_img_size=cfg['img_size']))
-    print(f"{WeathersCoarse.clear} weather {TimesOfDayCoarse.daytime} time data val split size: {len(val_sets[-1])}")
+    print(f"{WeathersCoarse.clear.capitalize()} weather {TimesOfDayCoarse.daytime} time data val split size: {len(val_sets[-1])}")
     
-    times_seq = [TimesOfDayCoarse.daytime, *TIMEOFDAY_SEQUENCE]
-    weathers_seq = [WeathersCoarse.clear, *WEATHERS_SEQUENCE]
-
-    for timeofday in times_seq:
-        for weather in weathers_seq:
+    domains = []
+    
+    for timeofday in TIMEOFDAY_SEQUENCE:
+        for weather in WEATHERS_SEQUENCE:
             print(f"Loading {weather} weather {timeofday} time of day data...")
 
             train_sets.append(SHIFTClassificationDataset(split='train',
@@ -102,23 +128,25 @@ def _get_domains_mix_sets(cfg):
                                             timeofdays_coarse=[timeofday],
                                             backend=ZipBackend(),
                                             classification_img_size=cfg['img_size']))
-            print(f"{weather} weather {timeofday} time data train split size: {len(train_sets[-1])}")
-            
-    return train_sets, val_sets
+            print(f"{weather.capitalize()} weather {timeofday} time data train split size: {len(train_sets[-1])}")
 
-# TODO: add clear and daytime as source experience for eval
+            domains.append(f"{timeofday}_{weather}")
+
+    return train_sets, val_sets, domains
 
 def get_shift_benchmark(cfg):
     train_sets = []
     val_sets = []
     if cfg['benchmark'] == "shift_weather":
-        train_sets, val_sets = _get_weather_sets(cfg)
+        train_sets, val_sets, domains = _get_weather_sets(cfg)
     elif cfg['benchmark'] == "shift_timeofday":
-        train_sets, val_sets = _get_timeofday_sets(cfg)
+        train_sets, val_sets, domains = _get_timeofday_sets(cfg)
     elif cfg['benchmark'] == 'shift_mix':
-        train_sets, val_sets = _get_domains_mix_sets(cfg)
+        train_sets, val_sets, domains = _get_domains_mix_sets(cfg)
     else:
         raise ValueError("Unknown type of shift benchmark")
+
+    cfg['domains'] = domains
 
     # transform_groups = dict(
     #     train=(None, None),
@@ -156,4 +184,4 @@ def get_shift_benchmark(cfg):
                                                   test_datasets=val_exps_datasets,
                                                   # train_transform=None,
                                                   # eval_transform=None
-                                                  )
+                                                  ), domains

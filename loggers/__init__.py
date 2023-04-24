@@ -22,15 +22,20 @@ def get_eval_plugin(cfg, model: Module = None):
 
     if cfg['save_results']:
         loggers.append(JSONLogger(open(path_to_log_file + '.json', 'w')))
+        
         # save config
-        with open(os.path.join(experiment_folder, experiment_name + '_config') + '.yaml', 'w') as f:
+        with open(os.path.join(experiment_folder, experiment_name + '_config.yaml'), 'w') as f:
             yaml.dump(cfg, f, default_flow_style=False)
+
+        # save domains
+        with open(os.path.join(experiment_folder, 'domains.txt'), 'w') as f:
+            print(cfg['domains'], file=f)
 
     if cfg['wandb']:
         if model is not None:
-            wandb_logger = ImprovedWandBLogger(model=model, project_name=cfg['project_name'], run_name=cfg['run_name'])
+            wandb_logger = ImprovedWandBLogger(model=model, project_name=cfg['project_name'], run_name=cfg['run_name'], config=cfg)
         else:
-            wandb_logger = WandBLogger(project_name=cfg['project_name'], run_name=cfg['run_name'])
+            wandb_logger = WandBLogger(project_name=cfg['project_name'], run_name=cfg['run_name'], config=cfg)
         loggers.append(wandb_logger)
 
 
