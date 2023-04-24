@@ -10,14 +10,13 @@ from benchmarks.cifar10c import CIFAR10CDataset
 from benchmarks.shift import SHIFTClassificationDataset
 from shift_dev.types import WeathersCoarse, TimesOfDayCoarse
 from shift_dev.utils.backend import ZipBackend
+import clad
 
 
 def get_eata_strategy(cfg, model: torch.nn.Module, eval_plugin: EvaluationPlugin, plugins: Sequence):
     fisher_batch_size = 64
     if cfg['dataset'] == 'cifar10c':
         fisher_dataset = CIFAR10CDataset(cfg['data_root'], corruption=None, split='test', transforms=None)
-        fisher_loader = torch.utils.data.DataLoader(fisher_dataset, batch_size=fisher_batch_size, shuffle=True, 
-                                                    num_workers=cfg['num_workers'], pin_memory=True)
     elif cfg['dataset'] == 'shift':
         fisher_dataset = SHIFTClassificationDataset(split='val',
                                                     data_root=cfg['data_root'],
@@ -27,10 +26,14 @@ def get_eata_strategy(cfg, model: torch.nn.Module, eval_plugin: EvaluationPlugin
                                                         TimesOfDayCoarse.daytime],
                                                     backend=ZipBackend(),
                                                     classification_img_size=cfg['img_size'])
-        fisher_loader = torch.utils.data.DataLoader(fisher_dataset, batch_size=fisher_batch_size, shuffle=True, 
-                                                    num_workers=cfg['num_workers'], pin_memory=True)
+    elif cfg['dataset'] == 'shift':
+        # TODO: for now val set has all the domains, maybe modify for only daytime and depending on the possibilities match the weather with train set 
+        fisher_dataset = clad.get_cladc_val(cfg['data_root'], transform=None)
     else:
         raise NotImplementedError
+
+    fisher_loader = torch.utils.data.DataLoader(fisher_dataset, batch_size=fisher_batch_size, shuffle=True, 
+                                                    num_workers=cfg['num_workers'], pin_memory=True)
 
     subnet = eata.configure_model(model)
     params, param_names = eata.collect_params(subnet)
