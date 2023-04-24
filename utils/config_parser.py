@@ -63,7 +63,7 @@ class ConfigParser:
                             help='Name of the run')
         if self.mode == 'tta':
             parser.add_argument('--benchmark', type=str, default=None, required=True,
-                                help='cifar10c_long | cifar10c_repetitive | clad | shift_weather | shift_timeofday')
+                                help='cifar10c_long | cifar10c_repetitive | clad | shift_weather | shift_timeofday | shift_mix')
             parser.add_argument('--method', type=str, default=None, required=True,
                                 help='source | finetune | tent | cotta | eata')
         parser.add_argument('--model', type=str, default=argparse.SUPPRESS,
@@ -86,8 +86,6 @@ class ConfigParser:
                             help="Log to .txt")
         parser.add_argument('--scheduler_gamma', type=float, default=argparse.SUPPRESS,
                             help="Log to .txt")
-        parser.add_argument('--store_model', action='store_true',
-                            help="Stores model if specified. Has no effect is store is not set")
         parser.add_argument('--wandb', action='store_true',
                             help="Log with wandb")
         parser.add_argument('--save_results', action='store_true',

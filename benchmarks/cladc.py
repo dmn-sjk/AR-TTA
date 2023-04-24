@@ -1,10 +1,9 @@
 import clad
 from utils.transforms import get_transforms
-from typing import Sequence
 from avalanche.benchmarks.scenarios import GenericCLScenario
 
 
-def get_cladc_benchmark(cfg) -> Sequence[GenericCLScenario, Sequence[str]]:
+def get_cladc_benchmark(cfg) -> GenericCLScenario:
     transforms_test = get_transforms(cfg, train=False)
     
     # TODO: add 1st experience as source stream for eval

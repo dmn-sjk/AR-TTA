@@ -5,6 +5,7 @@ from avalanche.benchmarks.utils import (
 from shift_dev.types import WeathersCoarse, TimesOfDayCoarse
 from shift_dev.utils.backend import HDF5Backend, ZipBackend
 from avalanche.benchmarks.scenarios.generic_benchmark_creation import create_multi_dataset_generic_benchmark
+from avalanche.benchmarks.scenarios import GenericCLScenario
 
 from utils.transforms import get_transforms
 from datasets.shift import SHIFTClassificationDataset
@@ -134,7 +135,7 @@ def _get_domains_mix_sets(cfg):
 
     return train_sets, val_sets, domains
 
-def get_shift_benchmark(cfg):
+def get_shift_benchmark(cfg) -> GenericCLScenario:
     train_sets = []
     val_sets = []
     if cfg['benchmark'] == "shift_weather":
@@ -184,4 +185,4 @@ def get_shift_benchmark(cfg):
                                                   test_datasets=val_exps_datasets,
                                                   # train_transform=None,
                                                   # eval_transform=None
-                                                  ), domains
+                                                  )

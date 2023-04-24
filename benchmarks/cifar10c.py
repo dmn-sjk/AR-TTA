@@ -2,7 +2,6 @@ from avalanche.benchmarks.utils import (
     make_classification_dataset,
     classification_subset,
 )
-from typing import Sequence
 from avalanche.benchmarks.scenarios import GenericCLScenario
 from avalanche.benchmarks.scenarios.generic_benchmark_creation import create_multi_dataset_generic_benchmark
 
@@ -11,7 +10,7 @@ from constants.cifar import LONG_DOMAINS_SEQ, REPETITIVE_DOMAINS_SEQ, STANDARD_D
 from datasets.cifar10c import CIFAR10CDataset
 
 
-def get_cifar10c_benchmark(cfg) -> Sequence[GenericCLScenario, Sequence[str]]:
+def get_cifar10c_benchmark(cfg) -> GenericCLScenario:
     train_sets = []
     val_sets = []
     if cfg['benchmark'] == "cifar10c_standard":
