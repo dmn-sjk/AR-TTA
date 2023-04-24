@@ -29,7 +29,7 @@ def get_eval_plugin(cfg, model: Module = None):
 
         # save domains
         with open(os.path.join(experiment_folder, 'domains.txt'), 'w') as f:
-            print(cfg['domains'], file=f)
+            print(str(cfg['domains']).replace('[', '').replace(']', '').replace("'", ''), file=f)
 
     if cfg['wandb']:
         if model is not None:
