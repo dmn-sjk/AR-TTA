@@ -84,11 +84,11 @@ class FrozenModel(SupervisedTemplate):
         #     param.requires_grad = False
 
         # optimizer = SGD(filter(lambda p: p.requires_grad, model.parameters()), lr=0.01)
-        optimizer = SGD(model.parameters(), lr=0.01)
+        dummy_optimizer = SGD(model.parameters(), lr=0.01)
 
         super().__init__(
             model,
-            optimizer=optimizer,
+            optimizer=dummy_optimizer,
             criterion=criterion,
             train_mb_size=train_mb_size,
             train_epochs=1,
