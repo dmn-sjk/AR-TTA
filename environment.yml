@@ -44,7 +44,6 @@ dependencies:
   - pip:
       - absl-py==1.4.0
       - appdirs==1.4.4
-      - autoattack==0.1
       - avalanche-lib==0.3.1
       - beautifulsoup4==4.12.2
       - boto3==1.26.111
@@ -102,7 +101,7 @@ dependencies:
       - oauthlib==3.2.2
       - opencv-python==4.7.0.72
       - packaging==23.0
-      - pandas==1.3.5
+      - pandas==1.5.3
       - pathtools==0.1.2
       - pillow==9.5.0
       - plyfile==0.8.1
@@ -122,7 +121,7 @@ dependencies:
       - quadprog==0.1.11
       - requests==2.25.1
       - requests-oauthlib==1.3.1
-      - robustbench==1.1
+      - git+https://github.com/robustbench/robustbench@v1.1#egg=robustbench
       - rsa==4.9
       - s3transfer==0.6.0
       - scalabel==0.3.0
@@ -147,7 +146,7 @@ dependencies:
       - torchdiffeq==0.2.3
       - torchmetrics==0.11.4
       - torchvision==0.15.1
-      - tqdm==4.65.0
+      - tqdm==4.56.2
       - triton==2.0.0
       - tzdata==2023.3
       - urllib3==1.26.15
@@ -155,4 +154,4 @@ dependencies:
       - werkzeug==2.2.3
       - xmltodict==0.13.0
       - zipp==3.15.0
-prefix: /raid/NFS_SHARE/home/damian.sojka/programs/miniconda3/envs/conti_adapt
+      - pytest==7.3.1
