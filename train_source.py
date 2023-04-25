@@ -6,6 +6,7 @@ import os
 import wandb
 from torch.optim.lr_scheduler import ExponentialLR, LinearLR
 from tqdm import tqdm
+from robustbench.utils import load_model
 
 
 from utils.transforms import get_transforms
@@ -57,6 +58,9 @@ def main():
         model = models.resnet50(weights=models.ResNet50_Weights.DEFAULT)
     elif cfg['model'] == 'resnet101':
         model = models.resnet101(weights=models.ResNet101_Weights.DEFAULT)
+    elif cfg['model'] == 'wideresnet28':
+        model = load_model('Standard', cfg['model_ckpt_dir'],
+                            'cifar10', "corruptions")
     else:
         raise ValueError(f"Unknown model name: {cfg['model']}")
 

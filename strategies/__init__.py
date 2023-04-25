@@ -21,16 +21,16 @@ def get_strategy(cfg):
         model = torchvision.models.resnet50(weights=torchvision.models.ResNet50_Weights.DEFAULT)
         model.fc = torch.nn.Linear(model.fc.in_features, cfg['num_classes'], bias=True)
     elif cfg['model'] == 'wideresnet28':
-        if 'cifar10' not in cfg['dataset']:
-            raise ValueError(f"Robust bench wideresnet28 pretrained model only available for cifar10 dataset")
+        # if 'cifar10' not in cfg['dataset']
+            # raise ValueError(f"Robust bench wideresnet28 pretrained model only available for cifar10 dataset")
 
-        if cfg['dataset'] == 'cifar10c':
-            dataset = 'cifar10'
-        else:
-            dataset = cfg['dataset']
+        # if cfg['dataset'] == 'cifar10c':
+        #     dataset = 'cifar10'
+        # else:
+        #     dataset = cfg['dataset']
 
         model = load_model('Standard', cfg['model_ckpt_dir'],
-                            dataset, "corruptions")
+                            'cifar10', "corruptions")
     else:
         raise ValueError(f"Unknown model name: {cfg['model']}")
 
