@@ -26,7 +26,7 @@ def get_eata_strategy(cfg, model: torch.nn.Module, eval_plugin: EvaluationPlugin
                                                         TimesOfDayCoarse.daytime],
                                                     backend=ZipBackend(),
                                                     classification_img_size=cfg['img_size'])
-    elif cfg['dataset'] == 'shift':
+    elif cfg['dataset'] == 'clad':
         # TODO: for now val set has all the domains, maybe modify for only daytime and depending on the possibilities match the weather with train set 
         fisher_dataset = clad.get_cladc_val(cfg['data_root'], transform=None)
     else:
