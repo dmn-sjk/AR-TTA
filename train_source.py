@@ -45,7 +45,7 @@ def main():
     elif cfg['dataset'] == 'clad':
         train_set = clad.get_cladc_train(cfg['data_root'], transform=train_transform, img_size=cfg['img_size'], sequence_type='source')[0]
         # TODO: for now val set has all the domains, maybe modify for only daytime and depending on the possibilities match the weather with train set 
-        val_set = clad.get_cladc_val(cfg['data_root'], transform=val_transform)
+        val_set = clad.get_cladc_val(cfg['data_root'], transform=val_transform, img_size=cfg['img_size'])
     else:
         raise ValueError(f"Unknown dataset: {cfg['dataset']}")
     
