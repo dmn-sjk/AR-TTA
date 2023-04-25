@@ -35,10 +35,10 @@ def main():
     if cfg['dataset'] == 'shift':
         train_set = SHIFTClassificationDataset(split='train', data_root=cfg['data_root'], transforms=train_transform,
                                                 weathers_coarse=[WeathersCoarse.clear], timeofdays_coarse=[TimesOfDayCoarse.daytime],
-                                                backend=ZipBackend())
+                                                backend=ZipBackend(), classification_img_size=cfg['img_size'])
         val_set = SHIFTClassificationDataset(split='val', data_root=cfg['data_root'], transforms=val_transform,
                                             weathers_coarse=[WeathersCoarse.clear], timeofdays_coarse=[TimesOfDayCoarse.daytime],
-                                            backend=ZipBackend())
+                                            backend=ZipBackend(), classification_img_size=cfg['img_size'])
     elif cfg['dataset'] == 'cifar10c':
         train_set = CIFAR10CDataset(cfg['data_root'], corruption=None, split='train', transforms=train_transform)
         val_set = CIFAR10CDataset(cfg['data_root'], corruption=None, split='test', transforms=val_transform)
@@ -65,7 +65,7 @@ def main():
         raise ValueError(f"Unknown model name: {cfg['model']}")
 
     model.fc = Linear(model.fc.in_features, cfg['num_classes'], bias=True)
-
+    
     if 'pretrained_model_path' in cfg.keys():
         model.load_state_dict(torch.load(cfg['pretrained_model_path']))
 
