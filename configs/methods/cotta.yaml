@@ -1,6 +1,6 @@
 lr: 1.e-3
 model: wideresnet28
-optimizer: adam
+optimizer: sgd
 beta: 0.9
 weight_decay: 0.
 steps: 1
