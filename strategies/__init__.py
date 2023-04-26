@@ -31,8 +31,9 @@ def get_strategy(cfg):
                             'cifar10', "corruptions")
     else:
         raise ValueError(f"Unknown model name: {cfg['model']}")
-    
-    model.fc = torch.nn.Linear(model.fc.in_features, cfg['num_classes'], bias=True)
+
+    if cfg['dataset'] != 'cifar10c':    
+        model.fc = torch.nn.Linear(model.fc.in_features, cfg['num_classes'], bias=True)
 
     if 'pretrained_model_path' in cfg.keys():
         model.load_state_dict(torch.load(cfg['pretrained_model_path']))
