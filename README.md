@@ -39,3 +39,17 @@ git clone https://github.com/dmn-sjk/CLAD.git
 ```bash
 export PYTHONPATH=$PYTHONPATH:[clad_repository_folder]
 ```
+
+## Example source train:
+```bash
+python train_source.py --data_root /raid/NFS_SHARE/datasets --dataset shift --cuda 0 --num_workers 5 --run_name source_size32 --scheduler_gamma 0.85 --model wideresnet28 --wandb
+```
+
+
+## Example tta test:
+```bash
+python test_adaptation.py --data_root /raid/NFS_SHARE/datasets --save_results --method cotta --dataset shift --benchmark shift_mix --cuda 0 --num_workers 5 --run_name sgd_clear --pretrained_model_path models_checkpoints/shift_wideresnet28_source_size32.pth --model wideresnet28 --batch_size 10
+```
+
+## Evaluation
+To generate result charts use `evaluation/generate_charts.py` script.
