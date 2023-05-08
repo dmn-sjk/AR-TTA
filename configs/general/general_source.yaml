@@ -4,5 +4,5 @@ run_name: source_train
 model: resnet50
 lr: 0.01
 batch_size: 64
-num_epochs: 40
+num_epochs: 20
 scheduler_gamma: 0.85
