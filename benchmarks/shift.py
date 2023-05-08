@@ -1,3 +1,5 @@
+import numpy as np
+
 from avalanche.benchmarks.utils import (
     make_classification_dataset,
     classification_subset,
@@ -135,6 +137,47 @@ def _get_domains_mix_sets(cfg):
 
     return train_sets, val_sets, domains
 
+def _get_domains_hard_sets(cfg):
+    train_sets = []
+    val_sets = []
+    
+    transforms_test = get_transforms(cfg, train=False)
+    
+    # source domain, but validation split
+    val_sets.append(SHIFTClassificationDataset(split='val',
+                                                data_root=cfg['data_root'],
+                                                transforms=transforms_test,
+                                                weathers_coarse=[WeathersCoarse.clear],
+                                                timeofdays_coarse=[TimesOfDayCoarse.daytime],
+                                                backend=ZipBackend(),
+                                                classification_img_size=cfg['img_size']))
+    print(f"{WeathersCoarse.clear.capitalize()} weather {TimesOfDayCoarse.daytime} time data val split size: {len(val_sets[-1])}")
+    
+    domains = []
+    
+    weathers = [*WEATHERS_SEQUENCE, *WEATHERS_SEQUENCE]
+    timeofdays = [TimesOfDayCoarse.night] * len(WEATHERS_SEQUENCE) + [TimesOfDayCoarse.daytime] * len(WEATHERS_SEQUENCE)
+    rand_indexes = np.random.permutation(range(len(WEATHERS_SEQUENCE) * 2))
+
+    for idx in rand_indexes:
+        timeofday = timeofdays[idx]
+        weather = weathers[idx]
+
+        print(f"Loading {weather} weather {timeofday} time of day data...")
+
+        train_sets.append(SHIFTClassificationDataset(split='train',
+                                        data_root=cfg['data_root'],
+                                        transforms=transforms_test,
+                                        weathers_coarse=[weather],
+                                        timeofdays_coarse=[timeofday],
+                                        backend=ZipBackend(),
+                                        classification_img_size=cfg['img_size']))
+        print(f"{weather.capitalize()} weather {timeofday} time data train split size: {len(train_sets[-1])}")
+
+        domains.append(f"{timeofday}_{weather}")
+
+    return train_sets, val_sets, domains
+
 def get_shift_benchmark(cfg) -> GenericCLScenario:
     train_sets = []
     val_sets = []
@@ -144,6 +187,8 @@ def get_shift_benchmark(cfg) -> GenericCLScenario:
         train_sets, val_sets, domains = _get_timeofday_sets(cfg)
     elif cfg['benchmark'] == 'shift_mix':
         train_sets, val_sets, domains = _get_domains_mix_sets(cfg)
+    elif cfg['benchmark'] == 'shift_hard_rand':
+        train_sets, val_sets, domains = _get_domains_hard_sets(cfg)
     else:
         raise ValueError("Unknown type of shift benchmark")
 
