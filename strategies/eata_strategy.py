@@ -76,7 +76,16 @@ def get_eata_strategy(cfg, model: torch.nn.Module, eval_plugin: EvaluationPlugin
     del ewc_optimizer
     del fisher_loader
 
-    optimizer = torch.optim.SGD(params, cfg['lr'], momentum=0.9)
+    if cfg['optimizer'] == 'adam':
+        optimizer = torch.optim.Adam(params,
+                                    lr=cfg['lr'],
+                                    betas=(cfg['beta'], 0.999),
+                                    weight_decay=cfg['weight_decay'])
+    elif cfg['optimizer'] == 'sgd':
+        optimizer = torch.optim.SGD(params, lr=cfg['lr'], momentum=0.9, nesterov=cfg['nesterov'])
+    else:
+        raise ValueError(f"Unknown optimizer: {cfg['optimizer']}")
+
     adapt_model = eata.EATA(subnet, optimizer, fishers, cfg['fisher_alpha'], e_margin=cfg['e_margin'], d_margin=cfg['d_margin'])
     
     plugins.append(EATAPlugin())

@@ -18,7 +18,7 @@ def get_cotta_strategy(cfg, model: torch.nn.Module, eval_plugin: EvaluationPlugi
                                     betas=(cfg['beta'], 0.999),
                                     weight_decay=cfg['weight_decay'])
     elif cfg['optimizer'] == 'sgd':
-        optimizer = torch.optim.SGD(params, lr=cfg['lr'])
+        optimizer = torch.optim.SGD(params, lr=cfg['lr'], momentum=0.9, nesterov=cfg['nesterov'])
     else:
         raise ValueError(f"Unknown optimizer: {cfg['optimizer']}")
 
