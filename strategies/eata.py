@@ -60,9 +60,7 @@ class EATA(nn.Module):
                 self.num_samples_update_1 += num_counts_1
                 self.reset_model_probs(updated_probs)
         else:
-            self.model.eval()
-            with torch.no_grad():
-                outputs = self.model(x)
+            outputs = self.model(x)
         return outputs
 
     def reset(self):
