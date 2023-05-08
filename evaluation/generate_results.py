@@ -7,6 +7,9 @@ from prettytable import PrettyTable
 import argparse
 import sys
 import csv
+import shutil
+import yaml
+import matplotlib.colors as mcolors
 
 
 LOGS_TO_USE = []
@@ -15,6 +18,20 @@ LOGS_FOLDER = 'logs'
 DOMAINS_FILE = 'domains.txt'
 WINDOW_SIZE = 500 # for batch-wise train acc plot  
 
+
+def get_plot_color(method):
+    if 'frozen' in method:
+        return 'tab:red'
+    elif 'finetune' in method:
+        return 'tab:green'
+    elif 'eata' in method:
+        return 'tab:orange' 
+    elif 'cotta' in method:
+        return 'tab:blue' 
+    elif 'tent' in method:
+        return 'tab:purple' 
+
+    return np.random.choice(list(mcolors.TABLEAU_COLORS)[5:])
 
 def parse_args():
     parser = argparse.ArgumentParser()
@@ -30,15 +47,15 @@ def parse_args():
         LOGS_TO_USE.append(log)
         
     if len(LOGS_TO_USE) == 0:
-        raise ValueError("Give log folders' names to generate results from") 
+        raise ValueError("Provide log folders' names to generate results from") 
         
     return args
 
 def get_and_check_domains():
     domains = []
     for log in LOGS_TO_USE:
-        with open(os.path.join(LOGS_FOLDER, log, DOMAINS_FILE), "r") as f:
-            curr_domains = f.read().strip().split(',')
+        with open(os.path.join(LOGS_FOLDER, log, log + '_config.yaml'), "r") as f:
+            curr_domains = yaml.safe_load(f)['domains']
             
             if len(curr_domains) == 0:
                 raise ValueError("Empty domains file!")
@@ -62,11 +79,16 @@ def load_results():
     
     return results
 
+def copy_config_files():
+    for log in LOGS_TO_USE:
+        shutil.copy(os.path.join(LOGS_FOLDER, log, log + '_config.yaml'),
+                    os.path.join(RESULTS_FOLDER, args.results_name))
         
 def main(args):
     if args.save_results:
         os.makedirs(os.path.join(RESULTS_FOLDER, args.results_name), exist_ok=True)
         
+    copy_config_files()
     domains = get_and_check_domains()
     results = load_results()
 
@@ -140,7 +162,7 @@ def main(args):
                 window_accs.append(np.mean(window))
             whole_results.extend(window_accs)
         accs = np.array(whole_results) * 100.0
-        ax.plot(range(len(whole_results)), accs, label=method)
+        ax.plot(range(len(whole_results)), accs, label=method, color=get_plot_color(method))
 
     end_of_x_axis = 0
     xticks = [end_of_x_axis]
@@ -168,7 +190,7 @@ def main(args):
         fig, ax = plt.subplots(nrows=1, ncols=1)
         for method in LOGS_TO_USE:
             accs = np.array(results[method][seq]) * 100.0
-            ax.plot(range(len(accs)), accs, marker='.', label=method)
+            ax.plot(range(len(accs)), accs, marker='.', label=method, color=get_plot_color(method))
 
         plt.xticks(range(len(domains) + 1), ['Init', *range(len(domains))])
         plt.grid(axis='both')
