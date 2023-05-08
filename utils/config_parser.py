@@ -84,6 +84,8 @@ class ConfigParser:
                             help="Log to .txt")
         parser.add_argument('--num_epochs', type=int, default=argparse.SUPPRESS,
                             help="Log to .txt")
+        parser.add_argument('--img_size', type=int, default=argparse.SUPPRESS,
+                            help="Log to .txt")
         parser.add_argument('--scheduler_gamma', type=float, default=argparse.SUPPRESS,
                             help="Log to .txt")
         parser.add_argument('--wandb', action='store_true',
