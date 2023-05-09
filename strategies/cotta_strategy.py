@@ -1,6 +1,5 @@
 from avalanche.training.plugins import EvaluationPlugin
-from avalanche.core import SupervisedPlugin
-from avalanche.training.templates import SupervisedTemplate, BaseTemplate
+from strategies.adapt_turnoff_plugin import AdaptTurnoffPlugin
 from typing import Sequence
 import torch
 
@@ -29,19 +28,10 @@ def get_cotta_strategy(cfg, model: torch.nn.Module, eval_plugin: EvaluationPlugi
                        rst_m=cfg['rst'],
                        ap=cfg['ap'],
                        img_size=cfg['img_size'])
-    plugins.append(CottaPlugin())
+
+    plugins.append(AdaptTurnoffPlugin())
 
     return FrozenModel(
         cotted_model, train_mb_size=cfg['batch_size'], eval_mb_size=128,
         device=cfg['device'], evaluator=eval_plugin, plugins=plugins, eval_every=-1)
-    
-    
-class CottaPlugin(SupervisedPlugin):
-    def __init__(self):
-        super().__init__()
 
-    def before_training(self, strategy: "SupervisedTemplate", **kwargs):
-        strategy.model.adapt = True
-
-    def before_eval(self, strategy: "SupervisedTemplate", **kwargs):
-        strategy.model.adapt = False

@@ -1,8 +1,7 @@
 import torch
 from torch import nn
 
-from avalanche.training.templates import SupervisedTemplate, BaseTemplate
-from avalanche.core import SupervisedPlugin
+from strategies.adapt_turnoff_plugin import AdaptTurnoffPlugin
 import strategies.tent as tent
 from strategies.frozen_strategy import FrozenModel
 from avalanche.training.plugins import EvaluationPlugin
@@ -43,7 +42,7 @@ def get_tent_strategy(cfg, model: nn.Module, eval_plugin: EvaluationPlugin, plug
         raise ValueError(f"Unknown optimizer: {cfg['optimizer']}")
         
     tented_model = tent.Tent(model, optimizer)
-    plugins.append(TentPlugin())
+    plugins.append(AdaptTurnoffPlugin())
 
     return FrozenModel(
         tented_model, train_mb_size=cfg['batch_size'], eval_mb_size=128,
@@ -67,14 +66,3 @@ def get_tented_model_and_params(model):
                     params.append(p)
 
     return model, params
-
-
-class TentPlugin(SupervisedPlugin):
-    def __init__(self):
-        super().__init__()
-
-    def before_training(self, strategy: "SupervisedTemplate", **kwargs):
-        strategy.model.adapt = True
-
-    def before_eval(self, strategy: "SupervisedTemplate", **kwargs):
-        strategy.model.adapt = False

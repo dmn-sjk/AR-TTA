@@ -1,11 +1,15 @@
 from avalanche.training.plugins import EvaluationPlugin
 from avalanche.core import SupervisedPlugin
-from avalanche.training.templates import SupervisedTemplate, BaseTemplate
+from avalanche.training.templates import SupervisedTemplate
 from typing import Sequence
 import torch
+from copy import copy
+import numpy as np
 
 import strategies.eata as eata
+from strategies.eata import softmax_entropy
 from strategies.frozen_strategy import FrozenModel
+from strategies.adapt_turnoff_plugin import AdaptTurnoffPlugin
 from benchmarks.cifar10c import CIFAR10CDataset
 from benchmarks.shift import SHIFTClassificationDataset
 from shift_dev.types import WeathersCoarse, TimesOfDayCoarse
@@ -86,68 +90,91 @@ def get_eata_strategy(cfg, model: torch.nn.Module, eval_plugin: EvaluationPlugin
     else:
         raise ValueError(f"Unknown optimizer: {cfg['optimizer']}")
 
+    cfg['e_margin'] = 0.4 * np.log(cfg['num_classes'])
+
     adapt_model = eata.EATA(subnet, optimizer, fishers, cfg['fisher_alpha'], e_margin=cfg['e_margin'], d_margin=cfg['d_margin'])
     
-    plugins.append(EATAPlugin())
+    plugins.append(AdaptTurnoffPlugin())
+    
+    if cfg['fisher_online']:
+        plugins.append(OnlineFisherPlugin(fishers, cfg['fisher_update_every']), cfg['e_margin'])
 
     return FrozenModel(
         adapt_model, train_mb_size=cfg['batch_size'], eval_mb_size=128,
         device=cfg['device'], evaluator=eval_plugin, plugins=plugins, eval_every=-1)
 
 
-class EATAPlugin(SupervisedPlugin):
-    def __init__(self):
+class OnlineFisherPlugin(SupervisedPlugin):
+    def __init__(self, current_fishers, update_every, e_margin = 0.921034037):
         super().__init__()
-
-    def before_training(self, strategy: "SupervisedTemplate", **kwargs):
-        strategy.model.adapt = True
-
-    def before_eval(self, strategy: "SupervisedTemplate", **kwargs):
-        strategy.model.adapt = False
-
-
-class OnlineEWCPlugin(SupervisedPlugin):
-    def __init__(self):
-        # TODO
-        raise NotImplementedError
-        super().__init__()
-        self.logsoft = torch.nn.LogSoftmax(dim=1)
-        self.checkpoint = None
-        self.fish = None
+        # self.logsoft = torch.nn.LogSoftmax(dim=1)
+        # self.checkpoint = None
+        self.current_fishers = copy(current_fishers)
+        self.update_every = update_every
+        self.sample_count = 0
+        # self.updated_fish = torch.zeros_like(model.get_params())
+        self.fishers = {}
+        self.e_margin = e_margin
         
-    def after_update(self, strategy: "SupervisedTemplate", **kwargs):
+    def after_training_iteration(self, strategy: "SupervisedTemplate", **kwargs):
         # current models outputs
         outputs = strategy.mb_output
+
+        entropys = softmax_entropy(outputs)
+        # filter unreliable samples
+        filter_ids = torch.where(entropys < self.e_margin)
+
+        if not torch.any(filter_ids):
+            return
+
+        entropys = entropys[filter_ids]
+        outputs = outputs[filter_ids]
+        _, targets = outputs.max(1)
         
-        # current mini batch
-        _, labels, _ = strategy.mbatch
+        strategy.model.optimizer.zero_grad()
         
-        for output, label in zip (outputs, labels):
-            strategy.model.optimizer.zero_grad()
-            loss = - torch.nn.functional.nll_loss(self.logsoft(output), label.unsqueeze(0),
-                                reduction='none')
-            exp_cond_prob = torch.mean(torch.exp(loss.detach().clone()))
-            loss = torch.mean(loss)
-            loss.backward()
-            self.updated_fish += exp_cond_prob * self.net.get_grads() ** 2
-
-
-            # for name, param in strategy.model.named_parameters():
-            #     if param.grad is not None:
-            #         if iter_ > 1:
-            #             fisher = param.grad.data.clone().detach() ** 2 + fishers[name][0]
-            #         else:
-            #             fisher = param.grad.data.clone().detach() ** 2
-            #         if iter_ == len(fisher_loader):
-            #             fisher = fisher / iter_
-            #         fishers.update({name: [fisher, param.data.clone().detach()]})
-            # ewc_optimizer.zero_grad()
-
-    def before_training(self, strategy: "SupervisedTemplate", **kwargs):
-        self.updated_fish = torch.zeros_like(strategy.model.get_params())
+        loss = torch.nn.functional.cross_entropy(outputs, targets)
         
-    def after_training(self, strategy: "SupervisedTemplate", **kwargs):
-        self.updated_fish /= (len(strategy.dataloader) * strategy.dataloader.batch_size)
+        # loss = - torch.nn.functional.nll_loss(self.logsoft(output), label.unsqueeze(0),
+        #                     reduction='none')
+        # exp_cond_prob = torch.mean(torch.exp(loss.detach().clone()))
+        # loss = torch.mean(loss)
+        loss.backward()
+        # self.updated_fish += exp_cond_prob * self.net.get_grads() ** 2
 
-        self.fish *= self.args.gamma
-        self.fish += self.updated_fish
+        self.sample_count += len(outputs)
+
+        for name, param in strategy.model.named_parameters():
+            if param.grad is not None:
+                if len(self.fishers.keys()) == 0:
+                    fisher = param.grad.data.clone().detach() ** 2 + self.fishers[name][0]
+                else:
+                    fisher = param.grad.data.clone().detach() ** 2
+                if self.sample_count == self.update_every:
+                    fisher = fisher / self.update_every
+                self.fishers.update({name: [fisher, param.data.clone().detach()]})
+        
+        strategy.model.optimizer.zero_grad()
+        
+        if self.sample_count == self.update_every:
+            self.sample_count = 0
+            
+            self.current_fishers *= self.args.gamma
+            self.current_fishers += self.updated_fish
+
+            strategy.model.fishers = copy(self.current_fishers)
+            
+            # self.updated_fish = torch.zeros_like(strategy.model.get_params())
+            self.fishers = {}
+
+
+    # def before_training(self, strategy: "SupervisedTemplate", **kwargs):
+    #     self.updated_fish = torch.zeros_like(strategy.model.get_params())
+        
+    # def after_training(self, strategy: "SupervisedTemplate", **kwargs):
+    #     self.updated_fish /= (len(strategy.dataloader) * strategy.dataloader.batch_size)
+
+    #     self.fish *= self.args.gamma
+    #     self.fish += self.updated_fish
+
+    #     strategy.model.fishers = copy(self.fish)
