@@ -1,5 +1,8 @@
 import torch
-from utils.utils import set_seed
+import os
+import yaml
+
+from utils.utils import set_seed, get_experiment_name, get_experiment_folder
 from utils.config_parser import ConfigParser
 from benchmarks import get_benchmark
 from strategies import get_strategy
@@ -17,6 +20,11 @@ def main():
 
     benchmark = get_benchmark(cfg)
     strategy = get_strategy(cfg)
+    
+    if cfg['save_results']:
+        # save config
+        with open(os.path.join(get_experiment_folder(cfg), get_experiment_name(cfg) + '_config.yaml'), 'w') as f:
+            yaml.dump(cfg, f, default_flow_style=False)
 
     for i, experience in enumerate(benchmark.train_stream):
         # strategy.train(experience, eval_streams=[benchmark.streams['val']], shuffle=False,

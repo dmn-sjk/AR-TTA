@@ -2,6 +2,7 @@ from torch import nn
 import torch
 import random
 import numpy as np
+import os
 
 
 def norm_params_unchanged(strategy, prev_norm_params):
@@ -38,3 +39,9 @@ def set_seed(seed):
         torch.set_deterministic(True)
     torch.backends.cudnn.benchmark = False
     torch.backends.cudnn.deterministic = True
+
+def get_experiment_name(cfg):
+    return f"{cfg['dataset']}_{cfg['benchmark']}_{cfg['method']}_{cfg['model']}_{cfg['run_name']}"
+
+def get_experiment_folder(cfg):
+    return os.path.join(cfg['log_dir'], get_experiment_name(cfg))

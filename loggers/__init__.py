@@ -1,19 +1,19 @@
 from .improved_wandb_logger import ImprovedWandBLogger
 from .json_logger import JSONLogger
+from utils.utils import get_experiment_name, get_experiment_folder
 
 from avalanche.logging import TextLogger, InteractiveLogger, WandBLogger, CSVLogger
 from avalanche.evaluation.metrics import accuracy_metrics, loss_metrics, amca_metrics, timing_metrics
 from avalanche.training.plugins import EvaluationPlugin
 from torch.nn import Module
 import os
-import yaml
 
 
 def get_eval_plugin(cfg, model: Module = None):
     loggers = [InteractiveLogger()]
 
-    experiment_name = f"{cfg['dataset']}_{cfg['benchmark']}_{cfg['method']}_{cfg['model']}_{cfg['run_name']}"
-    experiment_folder = os.path.join(cfg['log_dir'], experiment_name)
+    experiment_name = get_experiment_name(cfg)
+    experiment_folder = get_experiment_folder(cfg)
 
     if not os.path.exists(experiment_folder):
         os.makedirs(experiment_folder)
@@ -22,10 +22,6 @@ def get_eval_plugin(cfg, model: Module = None):
 
     if cfg['save_results']:
         loggers.append(JSONLogger(open(path_to_log_file + '.json', 'w')))
-        
-        # save config
-        with open(os.path.join(experiment_folder, experiment_name + '_config.yaml'), 'w') as f:
-            yaml.dump(cfg, f, default_flow_style=False)
 
     if cfg['wandb']:
         if model is not None:
