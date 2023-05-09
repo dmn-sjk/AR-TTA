@@ -32,7 +32,7 @@ def get_strategy(cfg):
     else:
         raise ValueError(f"Unknown model name: {cfg['model']}")
 
-    if cfg['dataset'] != 'cifar10c':    
+    if not (cfg['dataset'] == 'cifar10c' and cfg['model'] == 'wideresnet28'):    
         model.fc = torch.nn.Linear(model.fc.in_features, cfg['num_classes'], bias=True)
 
     if 'pretrained_model_path' in cfg.keys():

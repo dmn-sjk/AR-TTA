@@ -97,7 +97,7 @@ def get_eata_strategy(cfg, model: torch.nn.Module, eval_plugin: EvaluationPlugin
     plugins.append(AdaptTurnoffPlugin())
     
     if cfg['fisher_online']:
-        plugins.append(OnlineFisherPlugin(fishers, cfg['fisher_update_every']), cfg['e_margin'])
+        plugins.append(OnlineFisherPlugin(fishers, cfg['fisher_update_every'], cfg['e_margin']))
 
     return FrozenModel(
         adapt_model, train_mb_size=cfg['batch_size'], eval_mb_size=128,
@@ -105,76 +105,60 @@ def get_eata_strategy(cfg, model: torch.nn.Module, eval_plugin: EvaluationPlugin
 
 
 class OnlineFisherPlugin(SupervisedPlugin):
-    def __init__(self, current_fishers, update_every, e_margin = 0.921034037):
+    def __init__(self, current_fishers, update_every, e_margin = 0.921034037, gamma = 0.95):
         super().__init__()
-        # self.logsoft = torch.nn.LogSoftmax(dim=1)
-        # self.checkpoint = None
         self.current_fishers = copy(current_fishers)
         self.update_every = update_every
         self.sample_count = 0
-        # self.updated_fish = torch.zeros_like(model.get_params())
         self.fishers = {}
         self.e_margin = e_margin
+        self.gamma = gamma
         
+    @torch.enable_grad()
     def after_training_iteration(self, strategy: "SupervisedTemplate", **kwargs):
         # current models outputs
-        outputs = strategy.mb_output
-
-        entropys = softmax_entropy(outputs)
-        # filter unreliable samples
-        filter_ids = torch.where(entropys < self.e_margin)
-
-        if not torch.any(filter_ids):
-            return
-
-        entropys = entropys[filter_ids]
-        outputs = outputs[filter_ids]
-        _, targets = outputs.max(1)
+        # outputs = strategy.mb_output
         
         strategy.model.optimizer.zero_grad()
         
-        loss = torch.nn.functional.cross_entropy(outputs, targets)
+        # TODO: instead get outpus from mb_output to avoid double forward (for now problems with grad)
+        inputs = strategy.mb_x
+        # get outputs directly from the model, not EATA
+        outputs = strategy.model.model(inputs)
+         
+        entropys = softmax_entropy(outputs)
+        # filter unreliable samples
+        filter_ids = torch.where(entropys < self.e_margin)[0]
         
-        # loss = - torch.nn.functional.nll_loss(self.logsoft(output), label.unsqueeze(0),
-        #                     reduction='none')
-        # exp_cond_prob = torch.mean(torch.exp(loss.detach().clone()))
-        # loss = torch.mean(loss)
+        if len(filter_ids) == 0:
+            return
+
+        outputs = outputs[filter_ids]
+        _, targets = outputs.max(1)
+        loss = torch.nn.functional.cross_entropy(outputs, targets)
         loss.backward()
-        # self.updated_fish += exp_cond_prob * self.net.get_grads() ** 2
 
         self.sample_count += len(outputs)
 
         for name, param in strategy.model.named_parameters():
+            # remove 'model.' from the beginning of name
+            name = name[6:]
             if param.grad is not None:
-                if len(self.fishers.keys()) == 0:
+                if name in self.fishers.keys():
                     fisher = param.grad.data.clone().detach() ** 2 + self.fishers[name][0]
                 else:
                     fisher = param.grad.data.clone().detach() ** 2
-                if self.sample_count == self.update_every:
-                    fisher = fisher / self.update_every
+                if self.sample_count >= self.update_every:
+                    fisher = fisher / self.sample_count
                 self.fishers.update({name: [fisher, param.data.clone().detach()]})
         
-        strategy.model.optimizer.zero_grad()
-        
-        if self.sample_count == self.update_every:
+        if self.sample_count >= self.update_every:
             self.sample_count = 0
             
-            self.current_fishers *= self.args.gamma
-            self.current_fishers += self.updated_fish
+            for name in self.current_fishers.keys():
+                self.current_fishers[name][0] *= self.gamma
+                self.current_fishers[name][0] += self.fishers[name][0]
 
             strategy.model.fishers = copy(self.current_fishers)
             
-            # self.updated_fish = torch.zeros_like(strategy.model.get_params())
             self.fishers = {}
-
-
-    # def before_training(self, strategy: "SupervisedTemplate", **kwargs):
-    #     self.updated_fish = torch.zeros_like(strategy.model.get_params())
-        
-    # def after_training(self, strategy: "SupervisedTemplate", **kwargs):
-    #     self.updated_fish /= (len(strategy.dataloader) * strategy.dataloader.batch_size)
-
-    #     self.fish *= self.args.gamma
-    #     self.fish += self.updated_fish
-
-    #     strategy.model.fishers = copy(self.fish)

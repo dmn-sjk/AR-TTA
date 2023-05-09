@@ -6,5 +6,5 @@ d_margin: 0.04
 fisher_clip_by_norm: 10
 nesterov: true
 optimizer: sgd
-fisher_online: true
+fisher_online: false
 fisher_update_every: 100
