@@ -55,7 +55,7 @@ def get_and_check_domains():
     domains = []
     for log in LOGS_TO_USE:
         with open(os.path.join(LOGS_FOLDER, log, log + '_config.yaml'), "r") as f:
-            curr_domains = yaml.safe_load(f)['domains']
+            curr_domains = yaml.load(f, Loader=yaml.Loader)['domains']
             
             if len(curr_domains) == 0:
                 raise ValueError("Empty domains file!")
@@ -87,8 +87,10 @@ def copy_config_files():
 def main(args):
     if args.save_results:
         os.makedirs(os.path.join(RESULTS_FOLDER, args.results_name), exist_ok=True)
-        
-    copy_config_files()
+    
+    if args.save_results:
+        copy_config_files()
+
     domains = get_and_check_domains()
     results = load_results()
 
@@ -110,9 +112,9 @@ def main(args):
         
         avg_accs_train.append(avg_acc_train)
 
-    tab = PrettyTable(table[0])
-    tab.add_rows(table[1:])
-    tab.float_format = '.2'
+    # tab = PrettyTable(table[0])
+    # tab.add_rows(table[1:])
+    # tab.float_format = '.2'
 
     if args.save_results:
         with open(os.path.join(RESULTS_FOLDER, args.results_name, args.results_name + '.csv'), 'w') as f:
@@ -120,7 +122,8 @@ def main(args):
             for row in table:
                 writer.writerow(row)
     else:
-        print(tab)
+        pass
+        # print(tab)
 
     # -----
     fig, ax = plt.subplots()
