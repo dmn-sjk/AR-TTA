@@ -15,23 +15,33 @@ import matplotlib.colors as mcolors
 LOGS_TO_USE = []
 RESULTS_FOLDER = 'results'
 LOGS_FOLDER = 'logs'
-DOMAINS_FILE = 'domains.txt'
 WINDOW_SIZE = 500 # for batch-wise train acc plot  
 
+colors = {}
 
 def get_plot_color(method):
-    if 'frozen' in method:
+    if method in colors.keys():
+        return colors[method]
+
+    if 'frozen' in method and 'tab:red' not in colors.values():
+        colors[method] = 'tab:red'
         return 'tab:red'
-    elif 'finetune' in method:
+    elif 'finetune' in method and 'tab:green' not in colors.values():
+        colors[method] = 'tab:green'
         return 'tab:green'
-    elif 'eata' in method:
+    elif 'eata' in method and 'tab:orange' not in colors.values():
+        colors[method] = 'tab:orange'
         return 'tab:orange' 
-    elif 'cotta' in method:
+    elif 'cotta' in method and 'tab:blue' not in colors.values():
+        colors[method] = 'tab:blue'
         return 'tab:blue' 
-    elif 'tent' in method:
+    elif 'tent' in method and 'tab:purple' not in colors.values():
+        colors[method] = 'tab:purple'
         return 'tab:purple' 
 
-    return np.random.choice(list(mcolors.TABLEAU_COLORS)[5:])
+    random_color = np.random.choice(list(mcolors.TABLEAU_COLORS)[5:])
+    colors[method] = random_color
+    return random_color
 
 def parse_args():
     parser = argparse.ArgumentParser()

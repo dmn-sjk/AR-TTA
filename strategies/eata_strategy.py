@@ -90,7 +90,7 @@ def get_eata_strategy(cfg, model: torch.nn.Module, eval_plugin: EvaluationPlugin
     else:
         raise ValueError(f"Unknown optimizer: {cfg['optimizer']}")
 
-    cfg['e_margin'] = 0.4 * np.log(cfg['num_classes'])
+    cfg['e_margin'] = float(0.4 * np.log(cfg['num_classes']))
 
     adapt_model = eata.EATA(subnet, optimizer, fishers, cfg['fisher_alpha'], e_margin=cfg['e_margin'], d_margin=cfg['d_margin'])
     
