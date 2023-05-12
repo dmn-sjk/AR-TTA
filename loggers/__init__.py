@@ -24,7 +24,7 @@ def get_eval_plugin(cfg, model: Module = None):
         loggers.append(JSONLogger(open(path_to_log_file + '.json', 'w')))
 
     if cfg['wandb']:
-        params = {'group': f"tta_{cfg['dataset']}", 'job_type': f"{cfg['run_name']}"}
+        params = {'group': f"tta_{cfg['dataset']}", 'job_type': f"{cfg['method']}_{cfg['run_name']}"}
         if model is not None:
             wandb_logger = ImprovedWandBLogger(model=model, project_name=cfg['project_name'], run_name=cfg['run_name'], config=cfg, 
                                                params=params)
