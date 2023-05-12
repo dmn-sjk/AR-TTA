@@ -113,6 +113,7 @@ class OnlineFisherPlugin(SupervisedPlugin):
         self.fishers = {}
         self.e_margin = e_margin
         self.gamma = gamma
+        self.logsoft = torch.nn.LogSoftmax(dim=1)
         
     @torch.enable_grad()
     def after_training_iteration(self, strategy: "SupervisedTemplate", **kwargs):
@@ -132,10 +133,21 @@ class OnlineFisherPlugin(SupervisedPlugin):
         
         if len(filter_ids) == 0:
             return
-
+        
         outputs = outputs[filter_ids]
         _, targets = outputs.max(1)
+
+
+        # TODO: correct with exp_cond_prob
+        raise NotImplementedError
+        # loss = - torch.nn.functional.nll_loss(self.logsoft(outputs), targets,
+        #                             reduction='none')
+        # exp_cond_prob = torch.mean(torch.exp(loss.detach().clone()))
+        # loss = torch.mean(loss)
+
+
         loss = torch.nn.functional.cross_entropy(outputs, targets)
+        
         loss.backward()
 
         self.sample_count += len(outputs)
@@ -145,8 +157,10 @@ class OnlineFisherPlugin(SupervisedPlugin):
             name = name[6:]
             if param.grad is not None:
                 if name in self.fishers.keys():
+                    # fisher = exp_cond_prob * param.grad.data.clone().detach() ** 2 + self.fishers[name][0]
                     fisher = param.grad.data.clone().detach() ** 2 + self.fishers[name][0]
                 else:
+                    # fisher = exp_cond_prob * param.grad.data.clone().detach() ** 2
                     fisher = param.grad.data.clone().detach() ** 2
                 if self.sample_count >= self.update_every:
                     fisher = fisher / self.sample_count

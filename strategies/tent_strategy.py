@@ -49,20 +49,20 @@ def get_tent_strategy(cfg, model: nn.Module, eval_plugin: EvaluationPlugin, plug
         device=cfg['device'], evaluator=eval_plugin, plugins=plugins, eval_every=-1)
 
 
-def get_tented_model_and_params(model):
-    model.requires_grad_(False)
-    for m in model.modules():
-        if isinstance(m, nn.BatchNorm2d):
-            m.requires_grad_(True)
-            m.track_running_stats = False
-            m.running_mean = None
-            m.running_var = None
+# def get_tented_model_and_params(model):
+#     model.requires_grad_(False)
+#     for m in model.modules():
+#         if isinstance(m, nn.BatchNorm2d):
+#             m.requires_grad_(True)
+#             m.track_running_stats = False
+#             m.running_mean = None
+#             m.running_var = None
 
-    params = []
-    for nm, m in model.named_modules():
-        if isinstance(m, nn.BatchNorm2d):
-            for np, p in m.named_parameters():
-                if np in ['weight', 'bias']:  # weight is scale, bias is shift
-                    params.append(p)
+#     params = []
+#     for nm, m in model.named_modules():
+#         if isinstance(m, nn.BatchNorm2d):
+#             for np, p in m.named_parameters():
+#                 if np in ['weight', 'bias']:  # weight is scale, bias is shift
+#                     params.append(p)
 
-    return model, params
+#     return model, params
