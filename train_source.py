@@ -19,6 +19,20 @@ from shift_dev.types import WeathersCoarse, TimesOfDayCoarse
 from shift_dev.utils.backend import ZipBackend
 
 
+def f1_score(y_true, y_pred):
+    tp = (y_true * y_pred).sum().to(torch.float32)
+    tn = ((1 - y_true) * (1 - y_pred)).sum().to(torch.float32)
+    fp = ((1 - y_true) * y_pred).sum().to(torch.float32)
+    fn = (y_true * (1 - y_pred)).sum().to(torch.float32)
+    
+    epsilon = 1e-8
+    
+    precision = tp / (tp + fp + epsilon)
+    recall = tp / (tp + fn + epsilon)
+    
+    return 2* (precision*recall) / (precision + recall + epsilon)
+
+
 def main():
     cfg = ConfigParser(mode="source").get_config()
 
@@ -105,11 +119,13 @@ def main():
                 loss = criterion(outputs, targets)
                 loss.backward()
                 optimizer.step()
+                
+                preds = torch.argmax(outputs, dim=-1)
 
-                acc = (torch.argmax(outputs, dim=-1) ==
-                       targets).float().mean().item() * 100.0
+                acc = (preds == targets).float().mean() * 100.0
+                f1 = f1_score(targets, preds)
                 if cfg['wandb']:
-                    wandb.log({'train_accuracy': acc, 'train_loss': loss.item()},
+                    wandb.log({'train_accuracy': acc.item(), 'train_loss': loss.item(), 'train_f1': f1.item()},
                               step=epoch*len(train_loader) + i)
 
                 tepoch.set_postfix(loss=loss.item(), accuracy=acc)
@@ -121,26 +137,32 @@ def main():
             model.eval()
             vloss_sum = 0
             vacc_sum = 0
+            vf1_sum = 0
             with torch.no_grad():
                 for i, data in enumerate(tqdm(val_loader, desc="Validating:")):
                     inputs, targets = data
                     inputs, targets = inputs.to(cfg['device']), targets.to(cfg['device'])
                     outputs = model(inputs)
                     loss = criterion(outputs, targets)
-
                     vloss_sum += loss.item()
-                    acc = (torch.argmax(outputs, dim=-1)
-                           == targets).float().mean()
+
+                    preds = torch.argmax(outputs, dim=-1)
+
+                    acc = (preds == targets).float().mean() * 100.0
                     vacc_sum += acc.item()
+                    
+                    vf1 = f1_score(targets, preds)
+                    vf1_sum += vf1.item()
 
                 avg_vloss = vloss_sum / len(val_loader)
-                avg_vacc = vacc_sum / len(val_loader) * 100.0
+                avg_vacc = vacc_sum / len(val_loader)
+                avg_vf1 = vf1_sum / len(val_loader)
 
                 print(
-                    f"Val accuracy: {avg_vacc:.2f}\nVal loss: {avg_vloss:.4f}")
+                    f"Val accuracy: {avg_vacc:.2f}\nVal F1: {avg_vf1:.2f}\nVal loss: {avg_vloss:.4f}")
 
                 if cfg['wandb']:
-                    wandb.log({'val_accuracy': avg_vacc, 'val_loss': avg_vloss},
+                    wandb.log({'val_accuracy': avg_vacc, 'val_loss': avg_vloss, 'val_f1': avg_vloss},
                               step=(epoch + 1) * len(train_loader))
 
                 if avg_vloss < best_loss:

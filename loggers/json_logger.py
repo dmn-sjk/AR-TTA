@@ -33,7 +33,7 @@ class JSONLogger(BaseLogger, SupervisedPlugin):
     # (results dict is kept in RAM and the whole log file gets updated,
     # since there is no easy way to append values to the array inside json)
 
-    def __init__(self, log_file: TextIO = sys.stdout):
+    def __init__(self, num_classes: int, log_file: TextIO = sys.stdout):
         """Creates an instance of `JSONLogger` class.
 
         :param log_file_path: path to results json file, including file name.
@@ -43,10 +43,12 @@ class JSONLogger(BaseLogger, SupervisedPlugin):
         # os.makedirs(log_file_path, exist_ok=True)
 
         self.log_file = log_file
-        
         self.results_dict = {}
-
         self.training_task_counter = 0
+        self.num_classes = num_classes
+
+        self.per_class_predictions = torch.zeros(size=(num_classes,))
+        self.per_class_samples = torch.zeros(size=(num_classes,))
         
     def _update_json_file(self):
         self.log_file.seek(0)  # rewind
@@ -66,6 +68,13 @@ class JSONLogger(BaseLogger, SupervisedPlugin):
             return m_val.item()
         else:
             return m_val
+        
+    def after_training_iteration(self, strategy: "SupervisedTemplate", **kwargs):
+        # current models outputs
+        outputs = strategy.mb_output
+        preds = torch.argmax(outputs, dim=-1)
+        self.per_class_predictions += torch.bincount(preds, minlength=self.num_classes)
+        self.per_class_samples += torch.bincount(strategy.mb_y, minlength=self.num_classes)
 
     def after_training(
         self,
@@ -74,6 +83,12 @@ class JSONLogger(BaseLogger, SupervisedPlugin):
         **kwargs,
     ):
         super().after_training(strategy, metric_values, **kwargs)
+
+        self._append_results('per_class_predictions', self.per_class_predictions.item())
+        self._append_results('per_class_samples', self.per_class_samples.item())
+        
+        self.per_class_predictions = torch.zeros(size=(self.num_classes,))
+        self.per_class_samples = torch.zeros(size=(self.num_classes,))
 
         # gotta do this because batch-wise acc is not passed via metric_values
         # (generally no metrics are passed after training for some reason)
