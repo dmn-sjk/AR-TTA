@@ -117,6 +117,12 @@ class JSONLogger(BaseLogger, SupervisedPlugin):
 
                     avg_iteration_time = val[1][0] / val[0][0]
                     self._append_results(new_result_key, avg_iteration_time)
+                elif key.startswith("Top1_ClassAcc_Epoch"):
+                    # delete task id
+                    result_key = key[:-9]
+                    # add class id
+                    result_key += key.split('/')[-1]
+                    self._append_results(result_key, val)
         
         self._update_json_file()
         self.training_task_counter += 1

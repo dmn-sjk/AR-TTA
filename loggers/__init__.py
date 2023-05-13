@@ -3,7 +3,7 @@ from .json_logger import JSONLogger
 from utils.utils import get_experiment_name, get_experiment_folder
 
 from avalanche.logging import TextLogger, InteractiveLogger, WandBLogger, CSVLogger
-from avalanche.evaluation.metrics import accuracy_metrics, loss_metrics, amca_metrics, timing_metrics, MinibatchClassAccuracy
+from avalanche.evaluation.metrics import accuracy_metrics, loss_metrics, amca_metrics, timing_metrics, EpochClassAccuracy
 from avalanche.training.plugins import EvaluationPlugin
 from torch.nn import Module
 import os
@@ -38,5 +38,5 @@ def get_eval_plugin(cfg, model: Module = None):
         loss_metrics(epoch_running=True, stream=True),
         amca_metrics(streams=("test", "train", "val")),
         timing_metrics(epoch_running=True, epoch=True),
-        MinibatchClassAccuracy(),
+        EpochClassAccuracy(),
         loggers=loggers)
