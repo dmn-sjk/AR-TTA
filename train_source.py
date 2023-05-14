@@ -151,7 +151,7 @@ def main():
                     f"Val accuracy: {avg_vacc:.2f}\nVal F1: {avg_vf1:.2f}\nVal loss: {avg_vloss:.4f}")
 
                 if cfg['wandb']:
-                    wandb.log({'val_accuracy': avg_vacc, 'val_loss': avg_vloss, 'val_f1': avg_vloss},
+                    wandb.log({'val_accuracy': avg_vacc, 'val_loss': avg_vloss, 'val_f1': avg_vf1},
                               step=(epoch + 1) * len(train_loader))
 
                 if avg_vloss < best_loss:
