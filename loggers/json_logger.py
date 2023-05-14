@@ -132,7 +132,7 @@ class JSONLogger(BaseLogger, SupervisedPlugin):
                     result_key += class_id
                     self._append_results(result_key, val[1][0])
 
-                    classes_not_logged_acc.remove(class_id)
+                    classes_not_logged_acc.remove(int(class_id))
                     
         for class_id in classes_not_logged_acc:
             result_key = f"Top1_ClassAcc_Epoch/train_phase/train_stream/{class_id}"
