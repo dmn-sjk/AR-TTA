@@ -102,7 +102,8 @@ class CIFAR10CDataset(torch.utils.data.Dataset):
                 rehearsal_data = np.concatenate([rehearsal_data, tem_data], axis=0)
                 rehearsal_label = np.concatenate([rehearsal_label, tem_label], axis=0)
 
-        return rehearsal_data, rehearsal_label
+        shuffled_idxs = np.random.permutation(len(rehearsal_label))
+        return rehearsal_data[shuffled_idxs], rehearsal_label[shuffled_idxs]
 
     def __len__(self):
         return len(self.dataset)
