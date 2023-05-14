@@ -100,7 +100,8 @@ class JSONLogger(BaseLogger, SupervisedPlugin):
         for key, val in metric_values.items():
             if "train_phase" in key:
 
-                task_nr = int(key.split('Task')[-1])
+                task_nr_idx = key.find('Task') + 4
+                task_nr = int(key[task_nr_idx : task_nr_idx + 3])
                 if task_nr != strategy.experience.current_experience:
                     continue
                 
