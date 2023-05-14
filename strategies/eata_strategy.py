@@ -117,6 +117,8 @@ class OnlineFisherPlugin(SupervisedPlugin):
         
     @torch.enable_grad()
     def after_training_iteration(self, strategy: "SupervisedTemplate", **kwargs):
+        super().after_training_iteration(strategy, **kwargs)
+
         # current models outputs
         # outputs = strategy.mb_output
         

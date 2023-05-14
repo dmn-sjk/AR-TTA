@@ -69,7 +69,11 @@ class JSONLogger(BaseLogger, SupervisedPlugin):
         else:
             return m_val
         
-    def after_training_iteration(self, strategy: "SupervisedTemplate", **kwargs):
+    def after_training_iteration(self, strategy: "SupervisedTemplate", 
+                                 metric_values: List["MetricValue"], 
+                                 **kwargs):
+        super().after_training_iteration(strategy, metric_values, **kwargs)
+
         # current models outputs
         outputs = strategy.mb_output
         preds = torch.argmax(outputs, dim=-1)
