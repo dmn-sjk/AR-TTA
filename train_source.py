@@ -107,7 +107,8 @@ def main():
                 loss.backward()
                 optimizer.step()
                 
-                preds = torch.argmax(outputs, dim=-1)
+                preds = torch.argmax(outputs, dim=-1).detach().cpu()
+                targets = targets.detach().cpu()
 
                 acc = (preds == targets).float().mean() * 100.0
                 f1 = f1_score(targets, preds, average='macro')
@@ -133,7 +134,8 @@ def main():
                     loss = criterion(outputs, targets)
                     vloss_sum += loss.item()
 
-                    preds = torch.argmax(outputs, dim=-1)
+                    preds = torch.argmax(outputs, dim=-1).detach().cpu()
+                    targets = targets.detach().cpu()
 
                     acc = (preds == targets).float().mean() * 100.0
                     vacc_sum += acc.item()
