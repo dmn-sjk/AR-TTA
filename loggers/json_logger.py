@@ -94,6 +94,8 @@ class JSONLogger(BaseLogger, SupervisedPlugin):
         self.per_class_predictions = torch.zeros(size=(self.num_classes,))
         self.per_class_samples = torch.zeros(size=(self.num_classes,))
 
+        classes_not_logged_acc = list(range(self.num_classes))
+
         # gotta do this because batch-wise acc is not passed via metric_values
         # (generally no metrics are passed after training for some reason)
         metric_values = strategy.evaluator.get_all_metrics()
@@ -126,9 +128,16 @@ class JSONLogger(BaseLogger, SupervisedPlugin):
                     # delete task id
                     result_key = key[:-9]
                     # add class id
-                    result_key += key.split('/')[-1]
-                    self._append_results(result_key, val)
-        
+                    class_id = key.split('/')[-1]
+                    result_key += class_id
+                    self._append_results(result_key, val[1][0])
+
+                    classes_not_logged_acc.remove(class_id)
+                    
+        for class_id in classes_not_logged_acc:
+            result_key = f"Top1_ClassAcc_Epoch/train_phase/train_stream/{class_id}"
+            self._append_results(result_key, None)
+
         self._update_json_file()
         self.training_task_counter += 1
 
