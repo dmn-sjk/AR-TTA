@@ -77,8 +77,8 @@ class JSONLogger(BaseLogger, SupervisedPlugin):
         # current models outputs
         outputs = strategy.mb_output
         preds = torch.argmax(outputs, dim=-1)
-        self.per_class_predictions += torch.bincount(preds.cpu(), minlength=self.num_classes)
-        self.per_class_samples += torch.bincount(strategy.mb_y.cpu(), minlength=self.num_classes)
+        self.per_class_predictions += torch.bincount(preds.detach().cpu(), minlength=self.num_classes)
+        self.per_class_samples += torch.bincount(strategy.mb_y.detach().cpu(), minlength=self.num_classes)
 
     def after_training(
         self,
@@ -88,8 +88,8 @@ class JSONLogger(BaseLogger, SupervisedPlugin):
     ):
         super().after_training(strategy, metric_values, **kwargs)
 
-        self._append_results('per_class_predictions', self.per_class_predictions.item())
-        self._append_results('per_class_samples', self.per_class_samples.item())
+        self._append_results('per_class_predictions', self.per_class_predictions.tolist())
+        self._append_results('per_class_samples', self.per_class_samples.tolist())
         
         self.per_class_predictions = torch.zeros(size=(self.num_classes,))
         self.per_class_samples = torch.zeros(size=(self.num_classes,))
