@@ -7,6 +7,7 @@ import wandb
 from torch.optim.lr_scheduler import ExponentialLR, LinearLR
 from tqdm import tqdm
 from robustbench.utils import load_model
+from sklearn.metrics import f1_score
 
 
 from utils.transforms import get_transforms
@@ -17,20 +18,6 @@ from datasets.cifar10c import CIFAR10CDataset
 import clad
 from shift_dev.types import WeathersCoarse, TimesOfDayCoarse
 from shift_dev.utils.backend import ZipBackend
-
-
-def f1_score(y_true, y_pred):
-    tp = (y_true * y_pred).sum().to(torch.float32)
-    tn = ((1 - y_true) * (1 - y_pred)).sum().to(torch.float32)
-    fp = ((1 - y_true) * y_pred).sum().to(torch.float32)
-    fn = (y_true * (1 - y_pred)).sum().to(torch.float32)
-    
-    epsilon = 1e-8
-    
-    precision = tp / (tp + fp + epsilon)
-    recall = tp / (tp + fn + epsilon)
-    
-    return 2* (precision*recall) / (precision + recall + epsilon)
 
 
 def main():
@@ -123,7 +110,7 @@ def main():
                 preds = torch.argmax(outputs, dim=-1)
 
                 acc = (preds == targets).float().mean() * 100.0
-                f1 = f1_score(targets, preds)
+                f1 = f1_score(targets, preds, average='macro')
                 if cfg['wandb']:
                     wandb.log({'train_accuracy': acc.item(), 'train_loss': loss.item(), 'train_f1': f1.item()},
                               step=epoch*len(train_loader) + i)
@@ -151,7 +138,7 @@ def main():
                     acc = (preds == targets).float().mean() * 100.0
                     vacc_sum += acc.item()
                     
-                    vf1 = f1_score(targets, preds)
+                    vf1 = f1_score(targets, preds, average='macro')
                     vf1_sum += vf1.item()
 
                 avg_vloss = vloss_sum / len(val_loader)
