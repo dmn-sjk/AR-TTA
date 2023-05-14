@@ -25,10 +25,10 @@ def get_cifar10c_benchmark(cfg) -> GenericCLScenario:
     cfg['domains'] = corruptions
     
     transforms_test = get_transforms(cfg, train=False)
-    
+
     val_sets.append(CIFAR10CDataset(cfg['data_root'], corruption=None, split="test", transforms=transforms_test))
     for corruption in corruptions:
-        train_sets.append(CIFAR10CDataset(cfg['data_root'], corruption=corruption, split="test", transforms=transforms_test))        
+        train_sets.append(CIFAR10CDataset(cfg['data_root'], corruption=corruption, split="test", transforms=transforms_test, imbalanced=cfg['imbalanced']))        
 
     # transform_groups = dict(
     #     train=(transforms_train, None),
