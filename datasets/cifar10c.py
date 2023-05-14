@@ -8,11 +8,15 @@ from constants.cifar import SEVERITIES, CORRUPTIONS
 
 
 class CIFAR10CDataset(torch.utils.data.Dataset):
+    NUM_CLASSES = 10
+
     def __init__(self, data_root: str, corruption: str = None, 
                  split: str = "test", severity: int = 5, 
-                 transforms: Callable =  None):
+                 transforms: Callable =  None, imbalanced: bool = False, imbalanced_rate: float = 0.01):
         self.dataset_path = os.path.join(data_root, "CIFAR-10-C")
         self.transforms = transforms
+        self.imbalanced = imbalanced
+        self.imbalanced_rate = imbalanced_rate
 
         if split == "train": 
             if corruption is not None:
@@ -55,11 +59,50 @@ class CIFAR10CDataset(torch.utils.data.Dataset):
         # make it compatible with our models (normalize)
         data = data.astype(np.float32) / 255.0
 
-        self.images = torch.from_numpy(data)
+        if self.imbalanced:
+            data, targets = self.produce_imbalanced_data(data, targets, self.imbalanced_rate)
+            
+        data = torch.from_numpy(data)
+        # self. for avalanche 
         self.targets = torch.from_numpy(targets)
 
-        self.dataset = torch.utils.data.TensorDataset(self.images,
+        self.dataset = torch.utils.data.TensorDataset(data,
                                                       self.targets)
+
+    def produce_imbalanced_data(self, x, y, imbalanced_rate):
+        rehearsal_data = None
+        rehearsal_label = None
+
+        data_percent = []
+        data_num = int(x.shape[0] / self.NUM_CLASSES)
+
+        for cls_idx in range(self.NUM_CLASSES):
+            num = data_num * (imbalanced_rate ** (cls_idx / (self.NUM_CLASSES - 1)))
+            data_percent.append(int(num))
+
+        print("imbalance_ratio is {}".format(data_percent[0] / data_percent[-1]))
+        print("per class num: {}".format(data_percent))
+
+        self.class_list = data_percent
+
+        for i in range(1, self.NUM_CLASSES + 1):
+            a1 = y >= i - 1
+            a2 = y < i
+            index = a1 & a2
+            task_train_x = x[index]
+            label = y[index]
+            data_num = task_train_x.shape[0]
+            index = np.random.choice(data_num, data_percent[i - 1])
+            tem_data = task_train_x[index]
+            tem_label = label[index]
+            if rehearsal_data is None:
+                rehearsal_data = tem_data
+                rehearsal_label = tem_label
+            else:
+                rehearsal_data = np.concatenate([rehearsal_data, tem_data], axis=0)
+                rehearsal_label = np.concatenate([rehearsal_label, tem_label], axis=0)
+
+        return rehearsal_data, rehearsal_label
 
     def __len__(self):
         return len(self.dataset)
