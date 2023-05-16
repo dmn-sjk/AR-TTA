@@ -4,6 +4,7 @@ import torch
 from avalanche.training import Naive
 from avalanche.training.supervised.strategy_wrappers_online import OnlineNaive
 from robustbench.utils import load_model
+import timm
 
 from .frozen_strategy import get_frozen_strategy
 from .tent_strategy import get_tent_strategy
@@ -29,6 +30,8 @@ def get_strategy(cfg):
 
         model = load_model('Standard', cfg['model_ckpt_dir'],
                             'cifar10', "corruptions")
+    elif cfg['model'] == 'resnet50gn':
+        model = timm.create_model('resnet50_gn', pretrained=True)
     else:
         raise ValueError(f"Unknown model name: {cfg['model']}")
 

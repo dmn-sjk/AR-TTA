@@ -94,48 +94,7 @@ def copy_config_files():
         shutil.copy(os.path.join(LOGS_FOLDER, log, log + '_config.yaml'),
                     os.path.join(RESULTS_FOLDER, args.results_name))
         
-def main(args):
-    if args.save_results:
-        os.makedirs(os.path.join(RESULTS_FOLDER, args.results_name), exist_ok=True)
-    
-    if args.save_results:
-        copy_config_files()
-
-    domains = get_and_check_domains()
-    results = load_results()
-
-    # -----
-    table = [["method", *domains, "Avg"], *[[] for i in range(len(LOGS_TO_USE))]]
-    avg_accs_train = []
-    print("Average acc train:")
-    for i, method in enumerate(LOGS_TO_USE):
-        table[i + 1].append(method)
-        flattened_results = []
-        for single_domain in results[method]["Top1_Acc_MB/train_phase/train_stream"]:
-            table[i + 1].append(np.mean(single_domain) * 100.0)
-            flattened_results.extend(single_domain)
-
-        avg_acc_train = np.mean(flattened_results) * 100.0
-
-        print(f'- {method}: {avg_acc_train:.2f}')
-        table[i + 1].append(avg_acc_train)
-        
-        avg_accs_train.append(avg_acc_train)
-
-    # tab = PrettyTable(table[0])
-    # tab.add_rows(table[1:])
-    # tab.float_format = '.2'
-
-    if args.save_results:
-        with open(os.path.join(RESULTS_FOLDER, args.results_name, args.results_name + '.csv'), 'w') as f:
-            writer = csv.writer(f)
-            for row in table:
-                writer.writerow(row)
-    else:
-        pass
-        # print(tab)
-
-    # -----
+def plot_avgtime_avgacc(results, avg_accs_train, args):
     fig, ax = plt.subplots()
     avg_accs = []
     avg_times = []
@@ -158,8 +117,28 @@ def main(args):
         plt.savefig(os.path.join(RESULTS_FOLDER, args.results_name, 'avg_train_acc_and_time.png'))
     else:
         plt.show()
+        
+def plot_acc_val(results, domains, args):
+    # checking only test stream
+    seqs = ["Top1_Acc_Stream/eval_phase/test_stream"]
+    for seq in seqs:
+        fig, ax = plt.subplots(nrows=1, ncols=1)
+        for method in LOGS_TO_USE:
+            accs = np.array(results[method][seq]) * 100.0
+            ax.plot(range(len(accs)), accs, marker='.', label=method, color=get_plot_color(method))
 
-    # -----
+        plt.xticks(range(len(domains) + 1), ['Init', *range(len(domains))])
+        plt.grid(axis='both')
+        plt.legend(loc='best')
+        plt.title(f"{seq} accuracy")
+        plt.xlabel("After task")
+        plt.ylabel("Accuracy [%]")
+        if args.save_results:
+            plt.savefig(os.path.join(RESULTS_FOLDER, args.results_name, 'avg_acc_test'))
+        else:
+            plt.show()
+        
+def plot_acc_train(results, domains, args):
     window = deque(maxlen=WINDOW_SIZE)
 
     # TRAINING SEQUENCES
@@ -188,6 +167,7 @@ def main(args):
     plt.grid(axis='both')
     plt.legend(loc='best')
     plt.tight_layout()
+    plt.subplots_adjust(top=0.95)
     plt.title("Train sequences accuracy")
     plt.xlabel("Task")
     plt.ylabel("Accuracy [%]")
@@ -195,26 +175,155 @@ def main(args):
         plt.savefig(os.path.join(RESULTS_FOLDER, args.results_name, 'train_acc_plot'))
     else:
         plt.show()
+        
+def plot_per_class_acc(results, domains, args):
+    result_key = "Top1_ClassAcc_Epoch/train_phase/train_stream/"
+    max_cols = 3
+    nrows = int(np.ceil(len(LOGS_TO_USE) / max_cols))
+    ncols = max_cols if len(LOGS_TO_USE) >= max_cols else len(LOGS_TO_USE)
+    fig, axs = plt.subplots(nrows=nrows,
+                            ncols=ncols, figsize=(15, 10))
 
-    # TEST AND VAL
-    # checking only test stream
-    seqs = ["Top1_Acc_Stream/eval_phase/test_stream"]
-    for seq in seqs:
-        fig, ax = plt.subplots(nrows=1, ncols=1)
-        for method in LOGS_TO_USE:
-            accs = np.array(results[method][seq]) * 100.0
-            ax.plot(range(len(accs)), accs, marker='.', label=method, color=get_plot_color(method))
-
-        plt.xticks(range(len(domains) + 1), ['Init', *range(len(domains))])
-        plt.grid(axis='both')
-        plt.legend(loc='best')
-        plt.title(f"{seq} accuracy")
-        plt.xlabel("After task")
-        plt.ylabel("Accuracy [%]")
-        if args.save_results:
-            plt.savefig(os.path.join(RESULTS_FOLDER, args.results_name, 'acg_acc_test'))
+    for i, method in enumerate(LOGS_TO_USE):
+        if nrows > 1 and ncols > 1:  
+            row = i // max_cols
+            col = i % max_cols
+            ax = axs[row, col]
+        elif ncols == 1:
+            ax = axs
         else:
-            plt.show()
+            col = i % max_cols
+            ax = axs[col]
+        
+        class_id = 0
+        while True:
+            if result_key + str(class_id) not in results[method].keys():
+                break
+
+            accs = np.array(results[method][result_key + str(class_id)]) * 100
+            ax.plot(range(len(accs)), accs, 
+                               marker='.', label=class_id)
+
+            class_id += 1
+
+        ax.set_title(method)
+        ax.set_xticks(range(len(domains)))
+        ax.set_xticklabels(domains)
+        ax.grid(axis='both')
+        ax.set_xlabel("Domain")
+        ax.set_ylabel("Accuracy [%]")
+
+        plt.tight_layout()
+        plt.subplots_adjust(top=0.9)
+        
+        handles, labels = ax.get_legend_handles_labels()
+        fig.legend(handles, labels, loc='lower center')
+        
+        fig.suptitle("Per class accuracy", fontsize="x-large")
+
+    if args.save_results:
+        plt.savefig(os.path.join(RESULTS_FOLDER, args.results_name, 'per_class_acc'))
+    else:
+        plt.show()
+        
+def plot_sample_frequency(results, domains, args):
+    per_class_samples_key = "per_class_samples"
+    per_class_predictions_key = "per_class_predictions"
+    max_cols = 3
+    nrows = int(np.ceil(len(LOGS_TO_USE) / max_cols))
+    ncols = max_cols if len(LOGS_TO_USE) >= max_cols else len(LOGS_TO_USE)
+    fig, axs = plt.subplots(nrows=nrows,
+                            ncols=ncols, figsize=(15, 10))
+
+    for i, method in enumerate(LOGS_TO_USE):
+        if nrows > 1 and ncols > 1:  
+            row = i // max_cols
+            col = i % max_cols
+            ax = axs[row, col]
+        elif ncols == 1:
+            ax = axs
+        else:
+            col = i % max_cols
+            ax = axs[col]
+        
+        per_class_samples = np.array(results[method][per_class_samples_key])
+        per_class_predictions = np.array(results[method][per_class_predictions_key])
+        preds_samples_ratio = np.divide(per_class_predictions, per_class_samples, 
+                                        out=np.full_like(per_class_predictions, fill_value=None,),
+                                        where=per_class_samples != 0)
+        
+        num_classes = len(per_class_samples[0])
+
+        for class_id in range(num_classes):
+            ax.plot(range(len(domains)), preds_samples_ratio[:, class_id],
+                               marker='.', label=class_id)
+
+            class_id += 1
+
+        ax.set_title(method)
+        ax.set_xticks(range(len(domains)))
+        ax.set_xticklabels(domains)
+        ax.grid(axis='both')
+        ax.set_xlabel("Domain")
+        ax.set_ylabel("Num of predictions to num of samples ratio")
+
+        plt.tight_layout()
+        plt.subplots_adjust(top=0.9)
+        
+        handles, labels = ax.get_legend_handles_labels()
+        fig.legend(handles, labels, loc='lower center')
+        
+        fig.suptitle("Per class preds vs samples ratio", fontsize="x-large")
+
+    if args.save_results:
+        plt.savefig(os.path.join(RESULTS_FOLDER, args.results_name, 'per_class_preds_samples_ratio'))
+    else:
+        plt.show()
+        
+def main(args):
+    if args.save_results:
+        os.makedirs(os.path.join(RESULTS_FOLDER, args.results_name), exist_ok=True)
+    
+    if args.save_results:
+        copy_config_files()
+
+    domains = get_and_check_domains()
+    results = load_results()
+
+    # =======================================================================================
+    table = [["method", *domains, "Avg"], *[[] for i in range(len(LOGS_TO_USE))]]
+    avg_accs_train = []
+    print("Average acc train:")
+    for i, method in enumerate(LOGS_TO_USE):
+        table[i + 1].append(method)
+        flattened_results = []
+        for single_domain in results[method]["Top1_Acc_MB/train_phase/train_stream"]:
+            table[i + 1].append(np.mean(single_domain) * 100.0)
+            flattened_results.extend(single_domain)
+
+        avg_acc_train = np.mean(flattened_results) * 100.0
+
+        print(f'- {method}: {avg_acc_train:.2f}')
+        table[i + 1].append(avg_acc_train)
+        
+        avg_accs_train.append(avg_acc_train)
+
+    if args.save_results:
+        with open(os.path.join(RESULTS_FOLDER, args.results_name, args.results_name + '.csv'), 'w') as f:
+            writer = csv.writer(f)
+            for row in table:
+                writer.writerow(row)
+    # =======================================================================================
+    plot_avgtime_avgacc(results, avg_accs_train, args)
+    # =======================================================================================
+    plot_acc_train(results, domains, args)
+    # =======================================================================================
+    plot_acc_val(results, domains, args)
+    # =======================================================================================
+    plot_per_class_acc(results, domains, args)
+    # =======================================================================================
+    plot_sample_frequency(results, domains, args)
+    # =======================================================================================
 
 if __name__ == "__main__":
     args = parse_args()

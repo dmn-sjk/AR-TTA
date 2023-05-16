@@ -8,6 +8,7 @@ from torch.optim.lr_scheduler import ExponentialLR, LinearLR
 from tqdm import tqdm
 from robustbench.utils import load_model
 from sklearn.metrics import f1_score
+import timm
 
 
 from utils.transforms import get_transforms
@@ -62,10 +63,13 @@ def main():
     elif cfg['model'] == 'wideresnet28':
         model = load_model('Standard', cfg['model_ckpt_dir'],
                             'cifar10', "corruptions")
+    elif cfg['model'] == 'resnet50gn':
+        model = timm.create_model('resnet50_gn', pretrained=True)
     else:
         raise ValueError(f"Unknown model name: {cfg['model']}")
 
-    model.fc = Linear(model.fc.in_features, cfg['num_classes'], bias=True)
+    if not (cfg['dataset'] == 'cifar10c' and cfg['model'] == 'wideresnet28'):
+        model.fc = Linear(model.fc.in_features, cfg['num_classes'], bias=True)
     
     if 'pretrained_model_path' in cfg.keys():
         model.load_state_dict(torch.load(cfg['pretrained_model_path']))
