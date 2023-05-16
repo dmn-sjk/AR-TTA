@@ -22,7 +22,7 @@ def get_sar_strategy(cfg, model: torch.nn.Module, eval_plugin: EvaluationPlugin,
     else:
         raise ValueError(f"Unknown optimizer: {cfg['optimizer']}")
     
-    cfg['e_margin'] = float(0.4 * np.log(cfg['num_classes']))
+    cfg['margin_e0'] = float(0.4 * np.log(cfg['num_classes']))
 
     sar_model = sar.SAR(model, optimizer, margin_e0=cfg['margin_e0'])
     plugins.append(AdaptTurnoffPlugin())
