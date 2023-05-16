@@ -11,6 +11,7 @@ from .tent_strategy import get_tent_strategy
 from .cotta_strategy import get_cotta_strategy
 from .eata_strategy import get_eata_strategy
 from .note_strategy import get_note_strategy
+from .sar_strategy import get_sar_strategy
 from loggers import get_eval_plugin
 
 
@@ -66,6 +67,8 @@ def get_strategy(cfg):
         strategy = get_eata_strategy(cfg, model, eval_plugin, plugins)
     elif cfg['method'] == 'note':
         strategy = get_note_strategy(cfg, model, eval_plugin, plugins)
+    elif cfg['method'] == 'sar':
+        strategy = get_sar_strategy(cfg, model, eval_plugin, plugins)
     else:
         raise ValueError(f"Unknown method: {cfg['method']}")
     
