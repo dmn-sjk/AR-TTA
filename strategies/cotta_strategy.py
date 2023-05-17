@@ -27,7 +27,8 @@ def get_cotta_strategy(cfg, model: torch.nn.Module, eval_plugin: EvaluationPlugi
                        mt_alpha=cfg['mt'],
                        rst_m=cfg['rst'],
                        ap=cfg['ap'],
-                       img_size=cfg['img_size'])
+                       img_size=cfg['img_size'],
+                       distillation_temp=cfg['distillation_temp'])
 
     plugins.append(AdaptTurnoffPlugin())
 

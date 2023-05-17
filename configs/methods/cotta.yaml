@@ -8,3 +8,6 @@ mt: 0.999
 rst: 0.01
 ap: 0.92
 nesterov: true
+
+# my modifications:
+distillation_temp: 1

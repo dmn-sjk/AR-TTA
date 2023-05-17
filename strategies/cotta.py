@@ -1,11 +1,10 @@
 from copy import deepcopy
-
 import torch
 import torch.nn as nn
 import torch.jit
-
 import PIL
 import torchvision.transforms as transforms
+
 import utils.cotta_transforms as my_transforms
 
 
@@ -55,7 +54,7 @@ class CoTTA(nn.Module):
     Once tented, a model adapts itself by updating on every forward.
     """
     def __init__(self, model, optimizer, steps=1, episodic=False, mt_alpha=0.99, rst_m=0.1, ap=0.9,
-                 img_size: int = 64):
+                 img_size: int = 64, distillation_temp: int = 1):
         super().__init__()
         self.model = model
         self.optimizer = optimizer
@@ -69,7 +68,9 @@ class CoTTA(nn.Module):
         self.mt = mt_alpha
         self.rst = rst_m
         self.ap = ap
+        
         self.adapt = True
+        self.distillation_temp = distillation_temp
 
     def forward(self, x):
         if self.episodic:
@@ -113,7 +114,8 @@ class CoTTA(nn.Module):
             outputs_ema = standard_ema
 
         # Student update
-        loss = (softmax_entropy(outputs, outputs_ema)).mean(0)
+        loss = (softmax_entropy(outputs / self.distillation_temp, outputs_ema / self.distillation_temp)).mean(0)
+
         loss.backward()
         optimizer.step()
         optimizer.zero_grad()
