@@ -21,9 +21,12 @@ def main():
     benchmark = get_benchmark(cfg)
     strategy = get_strategy(cfg)
     
+    experiment_name = get_experiment_name(cfg)
+    print(f"\n======================================\nExperiment name: {experiment_name}\n======================================\n")
+
     if cfg['save_results']:
         # save config
-        with open(os.path.join(get_experiment_folder(cfg), get_experiment_name(cfg) + '_config.yaml'), 'w') as f:
+        with open(os.path.join(get_experiment_folder(cfg), experiment_name + '_config.yaml'), 'w') as f:
             yaml.dump(cfg, f, default_flow_style=False)
 
     for i, experience in enumerate(benchmark.train_stream):

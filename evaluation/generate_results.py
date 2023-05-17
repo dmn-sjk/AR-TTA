@@ -3,13 +3,13 @@ import numpy as np
 import json
 import os
 from collections import deque
-from prettytable import PrettyTable
 import argparse
-import sys
 import csv
 import shutil
 import yaml
 import matplotlib.colors as mcolors
+import glob
+
 
 
 LOGS_TO_USE = []
@@ -51,10 +51,20 @@ def parse_args():
                         help='name of the folder of log of the experiment')
     parser.add_argument('--save_results', action='store_true',
                         help='')
+    parser.add_argument('--logs_regex', type=str,
+                        help='')
+    parser.add_argument('--per_class_acc', action='store_true',
+                        help='')
+    parser.add_argument('--pred_class_ratio', action='store_true',
+                        help='')
     args = parser.parse_args()
-    
-    for log in args.log_names:
-        LOGS_TO_USE.append(log)
+
+    global LOGS_TO_USE
+    LOGS_TO_USE = args.log_names
+
+    regex_matches = [log.split('/')[-1] for log in glob.glob(os.path.join('logs', args.logs_regex))]
+    print(f"Num of regex matches: {len(regex_matches)}")
+    LOGS_TO_USE.extend(regex_matches)
         
     if len(LOGS_TO_USE) == 0:
         raise ValueError("Provide log folders' names to generate results from") 
@@ -226,7 +236,7 @@ def plot_per_class_acc(results, domains, args):
     else:
         plt.show()
         
-def plot_sample_frequency(results, domains, args):
+def plot_pred_class_ratio(results, domains, args):
     per_class_samples_key = "per_class_samples"
     per_class_predictions_key = "per_class_predictions"
     max_cols = 3
@@ -280,6 +290,41 @@ def plot_sample_frequency(results, domains, args):
     else:
         plt.show()
         
+def plot_plot_per_timeofday_acc(results, domains, args):
+    fig, ax = plt.subplots(figsize=(10, 7))
+    avg_accs = {'day': [], 'night': []}
+    for method in LOGS_TO_USE:
+        sum_day, sum_night, num_day, num_night = 0, 0, 0, 0
+        for domain, accs in zip(domains, results[method]["Top1_Acc_MB/train_phase/train_stream"]):
+            # day for SHIFT, T1 and T3 are day sequences of CLAD
+            if 'day' in domain or 'T1' in domain or 'T3' in domain:
+                sum_day = np.sum(accs)
+                num_day = len(accs)
+                
+            # night for SHIFT, T0, T2, T4 are day sequences of CLAD
+            elif 'night' in domain or 'T0' in domain or 'T2' in domain or 'T4' in domain:
+                sum_night = np.sum(accs)
+                num_night = len(accs)
+
+        avg_accs['day'].append((sum_day / num_day) * 100)
+        avg_accs['night'].append((sum_night / num_night) * 100)
+
+    width = 0.3
+    plt.xticks(range(len(LOGS_TO_USE)), LOGS_TO_USE, rotation=45)
+    plt.title(f"Avg train accuracy day/night")
+    ax.bar(np.array(range(len(LOGS_TO_USE))) - (width / 2), avg_accs['day'], color='gold', width=width, label='day')
+    ax.bar(np.array(range(len(LOGS_TO_USE))) + (width / 2), avg_accs['night'], color='darkblue', width=width, label='night')
+    ax.set_xlabel("Method")
+    ax.set_ylabel("Accuracy [%]")
+    ax.grid(axis='both')
+    plt.legend(loc='best')
+    plt.tight_layout()
+
+    if args.save_results:
+        plt.savefig(os.path.join(RESULTS_FOLDER, args.results_name, 'avg_train_acc_and_time.png'))
+    else:
+        plt.show()
+        
 def main(args):
     if args.save_results:
         os.makedirs(os.path.join(RESULTS_FOLDER, args.results_name), exist_ok=True)
@@ -320,10 +365,15 @@ def main(args):
     # =======================================================================================
     plot_acc_val(results, domains, args)
     # =======================================================================================
-    plot_per_class_acc(results, domains, args)
+    if args.per_class_acc:
+        plot_per_class_acc(results, domains, args)
     # =======================================================================================
-    plot_sample_frequency(results, domains, args)
+    if args.pred_class_ratio:
+        plot_pred_class_ratio(results, domains, args)
     # =======================================================================================
+    if 'shift' in LOGS_TO_USE[0] or 'clad' in LOGS_TO_USE[0]:
+        print('yep')
+        plot_plot_per_timeofday_acc(results, domains, args)
 
 if __name__ == "__main__":
     args = parse_args()
