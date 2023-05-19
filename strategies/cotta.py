@@ -6,6 +6,7 @@ import PIL
 import torchvision.transforms as transforms
 
 import utils.cotta_transforms as my_transforms
+from utils.intermediate_features import IntermediateFeaturesGetter
 
 
 def get_tta_transforms(gaussian_std: float=0.005, soft=False, clip_inputs=False, img_size: int=64):
@@ -54,8 +55,9 @@ class CoTTA(nn.Module):
     Once tented, a model adapts itself by updating on every forward.
     """
     def __init__(self, model, optimizer, steps=1, episodic=False, mt_alpha=0.99, rst_m=0.1, ap=0.9,
-                 img_size: int = 64, distillation_temp: int = 1):
+                 img_size: int = 64, distillation_temp: int = 1, features_distillation: bool = False):
         super().__init__()
+        
         self.model = model
         self.optimizer = optimizer
         self.steps = steps
@@ -64,6 +66,17 @@ class CoTTA(nn.Module):
         
         self.model_state, self.optimizer_state, self.model_ema, self.model_anchor = \
             copy_model_and_optimizer(self.model, self.optimizer)
+            
+        if features_distillation:
+            self.model = IntermediateFeaturesGetter(self.model)
+            self.model_ema = IntermediateFeaturesGetter(self.model_ema)
+            self.model_anchor = IntermediateFeaturesGetter(self.model_anchor)
+            # name of penultimate layer
+            self.features_layer = list(model.named_children())[-2][0]
+            self.model.register_features(self.features_layer)
+            self.model_ema.register_features(self.features_layer)
+            self.model_anchor.register_features(self.features_layer)
+            
         self.transform = get_tta_transforms(img_size=img_size)    
         self.mt = mt_alpha
         self.rst = rst_m
@@ -71,6 +84,7 @@ class CoTTA(nn.Module):
         
         self.adapt = True
         self.distillation_temp = distillation_temp
+        self.features_distillation = features_distillation
 
     def forward(self, x):
         if self.episodic:
@@ -100,6 +114,10 @@ class CoTTA(nn.Module):
         # Teacher Prediction
         anchor_prob = torch.nn.functional.softmax(self.model_anchor(x), dim=1).max(1)[0]
         standard_ema = self.model_ema(x)
+        
+        if self.features_distillation:
+            ema_features = self.model_ema.get_features(self.features_layer)
+        
         # Threshold choice discussed in supplementary
         if anchor_prob.mean(0)<self.ap:
             # Augmentation-averaged Prediction
@@ -116,6 +134,10 @@ class CoTTA(nn.Module):
         # Student update
         loss = (softmax_entropy(outputs / self.distillation_temp, outputs_ema / self.distillation_temp)).mean(0)
 
+        if self.features_distillation:
+            loss += nn.functional.mse_loss(torch.flatten(self.model.get_features(self.features_layer)),
+                                         torch.flatten(ema_features))
+
         loss.backward()
         optimizer.step()
         optimizer.zero_grad()
@@ -124,6 +146,8 @@ class CoTTA(nn.Module):
         # Stochastic restore
         if True:
             for nm, m  in self.model.named_modules():
+                if 'model.' in nm:
+                    nm = nm.replace('model.', '')
                 for npp, p in m.named_parameters():
                     if npp in ['weight', 'bias'] and p.requires_grad:
                         mask = (torch.rand(p.shape)<self.rst).float().cuda() 
