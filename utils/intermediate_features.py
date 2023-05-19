@@ -15,7 +15,7 @@ class IntermediateFeaturesGetter(nn.Module):
             raise ValueError(f"There is no layer {layer_name} in the model")
 
         def hook(model, input, output):
-            self._features[layer_name] = output.detach()
+            self._features[layer_name] = output
 
         getattr(self.model, layer_name).register_forward_hook(hook)
 
