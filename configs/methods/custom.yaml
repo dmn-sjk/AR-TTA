@@ -1,0 +1,10 @@
+lr: 1.e-3
+optimizer: sgd
+beta: 0.9
+weight_decay: 0.
+steps: 1
+nesterov: true
+
+# my modifications:
+distillation_out_temp: 1 # of ditillation loss of output
+features_distillation_weight: 4 # distillation on feature level weight with respect to loss
