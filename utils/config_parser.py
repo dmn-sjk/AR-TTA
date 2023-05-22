@@ -74,7 +74,7 @@ class ConfigParser:
                             help='Name of the run')
         parser.add_argument('--data_root', type=str, default=argparse.SUPPRESS,
                             help='Root folder where the data is stored')
-        parser.add_argument('--note', type=str, default=argparse.SUPPRESS,
+        parser.add_argument('--notes', type=str, default=argparse.SUPPRESS,
                             help='Notes for the run')
         parser.add_argument('--num_workers', type=int, default=argparse.SUPPRESS,
                             help='Num workers to use for dataloading')
