@@ -82,9 +82,6 @@ class Custom(nn.Module):
         self.distillation_out_temp = distillation_out_temp
 
     def forward(self, x):
-        if self.episodic:
-            self.reset()
-        
         if self.adapt:
             for _ in range(self.steps):
                 outputs = self.forward_and_adapt(x, self.model, self.optimizer)
