@@ -14,15 +14,15 @@ def main():
     cfg['device'] = torch.device(f"cuda:{cfg['cuda']}"
                                  if torch.cuda.is_available() and cfg['cuda'] >= 0
                                  else "cpu")
+    
+    experiment_name = get_experiment_name(cfg)
+    print(f"\n======================================\nExperiment name: {experiment_name}\n======================================\n")
 
     if cfg['seed'] is not None:
         set_seed(cfg['seed'])
 
     benchmark = get_benchmark(cfg)
     strategy = get_strategy(cfg)
-    
-    experiment_name = get_experiment_name(cfg)
-    print(f"\n======================================\nExperiment name: {experiment_name}\n======================================\n")
 
     if cfg['save_results']:
         # save config

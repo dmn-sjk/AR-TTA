@@ -7,7 +7,7 @@ from strategies import custom
 from strategies.frozen_strategy import FrozenModel
 
 
-def get_cotta_strategy(cfg, model: torch.nn.Module, eval_plugin: EvaluationPlugin, plugins: Sequence):
+def get_custom_strategy(cfg, model: torch.nn.Module, eval_plugin: EvaluationPlugin, plugins: Sequence):
     model = custom.configure_model(model)
     params, param_names = custom.collect_params(model)
 
