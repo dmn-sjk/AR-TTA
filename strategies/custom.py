@@ -104,29 +104,28 @@ class Custom(nn.Module):
     def forward_and_adapt(self, x, model, optimizer):
         outputs = self.model(x)
         source_outputs = self.model_source(x)
-
-        # if self.features_distillation_weight != 0:
-        #     ema_features = self.model_ema.get_features(self.features_layer)
+        if self.features_distillation_weight != 0:
+            source_features = self.model_source.get_features(self.features_layer)
         
         # anchor_prob = torch.nn.functional.softmax(self.model_source(x), dim=1).max(1)[0]
         # # Threshold choice discussed in supplementary
         # if anchor_prob.mean(0)<self.ap:
-        #     # Augmentation-averaged Prediction
-        #     N = 32
-        #     outputs_emas = []
-        #     for i in range(N):
-        #         outputs_  = self.model_ema(self.transform(x)).detach()
-        #         outputs_emas.append(outputs_)
+        # Augmentation-averaged Prediction
+        N = 32
+        outputs_emas = []
+        for i in range(N):
+            outputs_  = self.model_source(self.transform(x)).detach()
+            outputs_emas.append(outputs_)
 
-        #     outputs_ema = torch.stack(outputs_emas).mean(0)
+        augs_outputs = torch.stack(outputs_emas).mean(0)
         # else:
         #     outputs_ema = standard_ema
 
-        loss = (softmax_entropy(outputs / self.distillation_out_temp, source_outputs / self.distillation_out_temp)).mean(0)
+        loss = (softmax_entropy(outputs / self.distillation_out_temp, augs_outputs / self.distillation_out_temp)).mean(0)
 
         if self.features_distillation_weight != 0:
             loss += self.features_distillation_weight * nn.functional.mse_loss(torch.flatten(self.model.get_features(self.features_layer)),
-                                                                               torch.flatten(self.model_source.get_features(self.features_layer)))
+                                                                               torch.flatten(source_features))
 
         loss.backward()
         optimizer.step()
