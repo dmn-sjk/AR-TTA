@@ -90,7 +90,9 @@ class ConfigParser:
                             help="Log to .txt")
         parser.add_argument('--scheduler_gamma', type=float, default=argparse.SUPPRESS,
                             help="Log to .txt")
-        parser.add_argument('--distillation_temp', type=int, default=argparse.SUPPRESS,
+        parser.add_argument('--distillation_out_temp', type=int, default=argparse.SUPPRESS,
+                            help="Log to .txt")
+        parser.add_argument('--features_distillation_weight', type=float, default=argparse.SUPPRESS,
                             help="Log to .txt")
         parser.add_argument('--wandb', action='store_true',
                             help="Log with wandb")
