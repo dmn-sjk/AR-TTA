@@ -52,4 +52,4 @@ python test_adaptation.py --data_root /raid/NFS_SHARE/datasets --save_results --
 ```
 
 ## Evaluation
-To generate result charts use `evaluation/generate_charts.py` script.
+To generate result charts use `evaluation/generate_results.py` script.
