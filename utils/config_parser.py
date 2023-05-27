@@ -56,7 +56,8 @@ class ConfigParser:
         return cfg
     
     def _parse_args(self) -> None:
-        parser = argparse.ArgumentParser()
+        parser = argparse.ArgumentParser(
+            description='Code for TTA testing. \nSome params are already defined in .yaml files in configs folder. Command line arguments overwrite params defined in .yaml configs')
         parser.add_argument('--dataset', type=str, default=None, required=True,
                             help='clad | shift | cifar10c')
         parser.add_argument('--run_name', type=str, default=None, required=True,
@@ -65,13 +66,13 @@ class ConfigParser:
             parser.add_argument('--benchmark', type=str, default=None, required=True,
                                 help='cifar10c_long | cifar10c_repetitive | cifar10c_standard | clad | shift_weather | shift_timeofday | shift_mix')
             parser.add_argument('--method', type=str, default=None, required=True,
-                                help='source | finetune | tent | cotta | eata')
+                                help='frozen | finetune | tent | cotta | eata | sar | custom')
         parser.add_argument('--model', type=str, default=argparse.SUPPRESS,
-                            help='Name of the run')
+                            help='name of the model')
         parser.add_argument('--project_name', type=str, default=argparse.SUPPRESS,
-                            help='Name of the run')
+                            help='project name for wandb')
         parser.add_argument('--pretrained_model_path', type=str, default=argparse.SUPPRESS,
-                            help='Name of the run')
+                            help='path to pretrained model')
         parser.add_argument('--data_root', type=str, default=argparse.SUPPRESS,
                             help='Root folder where the data is stored')
         parser.add_argument('--notes', type=str, default=argparse.SUPPRESS,
@@ -79,25 +80,25 @@ class ConfigParser:
         parser.add_argument('--num_workers', type=int, default=argparse.SUPPRESS,
                             help='Num workers to use for dataloading')
         parser.add_argument('--cuda', type=int, default=argparse.SUPPRESS,
-                            help='Whether to use cuda, -1 if not')
+                            help='Whether to use cuda and which GPU to use, -1 if not')
         parser.add_argument('--seed', type=int, default=argparse.SUPPRESS,
                             help='Random seed')
         parser.add_argument('--batch_size', type=int, default=argparse.SUPPRESS,
-                            help="Log to .txt")
+                            help="Training batch size")
         parser.add_argument('--num_epochs', type=int, default=argparse.SUPPRESS,
-                            help="Log to .txt")
+                            help="The number of epochs for training")
         parser.add_argument('--img_size', type=int, default=argparse.SUPPRESS,
-                            help="Log to .txt")
+                            help="Size of images to use")
         parser.add_argument('--scheduler_gamma', type=float, default=argparse.SUPPRESS,
-                            help="Log to .txt")
+                            help="Gamma value for exponential lr scheduler")
         parser.add_argument('--distillation_out_temp', type=int, default=argparse.SUPPRESS,
-                            help="Log to .txt")
+                            help="Temperature of distillation on output level")
         parser.add_argument('--features_distillation_weight', type=float, default=argparse.SUPPRESS,
-                            help="Log to .txt")
+                            help="The weight of distillation on feature level, 0 for no distillation. (Loss = weight * feature_distillation + loss)")
         parser.add_argument('--wandb', action='store_true',
                             help="Log with wandb")
         parser.add_argument('--save_results', action='store_true',
-                            help="Log to .txt")
+                            help="Save results")
         parser.add_argument('--watch_model', action='store_true',
                             help="Log model state in wandb")
         return parser.parse_args()

@@ -52,4 +52,7 @@ python test_adaptation.py --data_root /raid/NFS_SHARE/datasets --save_results --
 ```
 
 ## Evaluation
-To generate result charts use `evaluation/generate_results.py` script.
+To generate result charts use `evaluation/generate_results.py` script. Example usage:
+```bash
+python evaluation/generate_results.py --results_name cifar10c_standard_resnet50_clear --logs_regex cifar*unifoptim cifar10c_cifar10c_repetitive_frozen_wideresnet28_clear
+```

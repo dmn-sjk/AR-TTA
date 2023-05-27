@@ -15,9 +15,21 @@ import glob
 LOGS_TO_USE = []
 RESULTS_FOLDER = 'results'
 LOGS_FOLDER = 'logs'
-WINDOW_SIZE = 500 # for batch-wise train acc plot  
+WINDOW_SIZE = 500 # for batch-wise train acc plot
+DISCARD_REPEATED_DOMAINS = True
+POSSIBLE_METHODS = ['cotta', 'eata', 'tent', 'frozen', 'finetune', 'sar', 'custom']
+USELESS_COLORS = ['gainsboro', 'snow', 'mistyrose', 'seashell', 'linen', 'oldlace',
+                  'comsilk', 'ivory', 'lightyellow', 'honeydew', 'azure', 'aliceblue',
+                  'lavender', 'lavenderblush', 'mintcream']
 
 colors = {}
+
+def get_label(log_name):
+    for method in POSSIBLE_METHODS:
+        start_idx = log_name.find(method)
+        if start_idx != -1:
+            return log_name[start_idx:]
+    raise ValueError(f"No method name found in log name: {log_name}")
 
 def get_plot_color(method):
     if method in colors.keys():
@@ -82,26 +94,30 @@ def get_plot_color(method):
 
     while True:
         random_color = np.random.choice(list(mcolors.CSS4_COLORS))
-        if random_color not in colors.values() and 'white' not in random_color:
+        if random_color not in colors.values() \
+            and random_color not in USELESS_COLORS \
+            and 'grey' not in USELESS_COLORS \
+            and 'white' not in random_color:
             break
 
     colors[method] = random_color
     return random_color
 
 def parse_args():
-    parser = argparse.ArgumentParser()
+    parser = argparse.ArgumentParser(description=
+                                     'Code for generating results of TTA based on logs saved in logs folder during TTA via --save_results command line flag. Genrated results are saved in results folder.')
     parser.add_argument('--results_name', type=str, default=None, required=True,
-                        help='')
+                        help='Name of the folder in which results will be saved. ')
     parser.add_argument('log_names', type=str, nargs='*',
-                        help='name of the folder of log of the experiment')
+                        help='Names of the folders of logs of the chosen experiments.')
     parser.add_argument('--save_results', action='store_true',
-                        help='')
+                        help='Save plots and avg accuracies, instead of displaying them.')
     parser.add_argument('--logs_regex', type=str,
-                        help='')
+                        help='Regex expression for matching folders of experiments logs to generate results from.')
     parser.add_argument('--per_class_acc', action='store_true',
-                        help='')
+                        help='Plot per class accuracy.')
     parser.add_argument('--pred_class_ratio', action='store_true',
-                        help='')
+                        help='Plot ratio of predicitons vs occurances of each class.')
     args = parser.parse_args()
 
     global LOGS_TO_USE
@@ -133,15 +149,28 @@ def get_and_check_domains():
                                  - domains from previous logs: {domains}\n \
                                  - domains in {log} logs folder: {curr_domains}")
     
+    if DISCARD_REPEATED_DOMAINS:
+        for i, domain in enumerate(domains):
+            if domain in domains[:i]:
+                domains = domains[:i]
+                break
+    
     return domains
 
-def load_results():
+def load_results(domains):
     results = {}
 
     for log in LOGS_TO_USE:
         with open(os.path.join(LOGS_FOLDER, log, log + '_results.json'), 'r') as f:
             results[log] = json.load(f)
-    
+            
+            if DISCARD_REPEATED_DOMAINS:
+                for key in results[log].keys():
+                    # test_stream have one more value because of initial eval before TTA
+                    if 'test_stream' in key:
+                        results[log][key] = results[log][key][:len(domains) + 1]
+                    else:
+                        results[log][key] = results[log][key][:len(domains)]
     return results
 
 def copy_config_files():
@@ -158,7 +187,7 @@ def plot_avgtime_avgacc(results, avg_accs_train, args):
         avg_times.append(np.mean(results[method]["AvgTimeIter/train_phase/train_stream"]))
 
     width = 0.3
-    plt.xticks(range(len(avg_accs)), LOGS_TO_USE, rotation=45)
+    plt.xticks(range(len(avg_accs)), [get_label(log) for log in LOGS_TO_USE], rotation=45)
     plt.title(f"Avg train accuracy and run time")
     ax.bar(np.array(range(len(avg_accs))) - (width / 2), avg_accs, color='blue', width=width)
     ax2 = ax.twinx()
@@ -180,7 +209,7 @@ def plot_acc_val(results, domains, args):
         fig, ax = plt.subplots(nrows=1, ncols=1)
         for method in LOGS_TO_USE:
             accs = np.array(results[method][seq]) * 100.0
-            ax.plot(range(len(accs)), accs, marker='.', label=method, color=get_plot_color(method))
+            ax.plot(range(len(accs)), accs, marker='.', label=get_label(method), color=get_plot_color(method))
 
         plt.xticks(range(len(domains) + 1), ['Init', *range(len(domains))])
         plt.grid(axis='both')
@@ -188,12 +217,31 @@ def plot_acc_val(results, domains, args):
         plt.title(f"{seq} accuracy")
         plt.xlabel("After task")
         plt.ylabel("Accuracy [%]")
+        plt.tight_layout()
         if args.save_results:
             plt.savefig(os.path.join(RESULTS_FOLDER, args.results_name, 'avg_acc_test'))
         else:
             plt.show()
-        
-def plot_acc_train(results, domains, args):
+            
+def plot_domainwise_acc_train(results, domains, args):
+    fig, ax = plt.subplots(nrows=1, ncols=1)
+    for method in LOGS_TO_USE:
+        accs = np.array(results[method]["Top1_Acc_MB/train_phase/train_stream"]).mean(1) * 100.0
+        ax.plot(range(len(accs)), accs, marker='.', label=get_label(method), color=get_plot_color(method))
+
+    plt.xticks(range(len(domains)), domains, rotation=45)
+    plt.grid(axis='both')
+    plt.legend(loc='best')
+    plt.title(f"TTA accuracy")
+    plt.xlabel("Domain")
+    plt.ylabel("Accuracy [%]")
+    plt.tight_layout()
+    if args.save_results:
+        plt.savefig(os.path.join(RESULTS_FOLDER, args.results_name, 'train_domainwise_acc_plot'))
+    else:
+        plt.show()
+    
+def plot_batchwise_acc_train(results, domains, args):
     window = deque(maxlen=WINDOW_SIZE)
 
     # TRAINING SEQUENCES
@@ -209,7 +257,7 @@ def plot_acc_train(results, domains, args):
                 window_accs.append(np.mean(window))
             whole_results.extend(window_accs)
         accs = np.array(whole_results) * 100.0
-        ax.plot(range(len(whole_results)), accs, label=method, color=get_plot_color(method))
+        ax.plot(range(len(whole_results)), accs, label=get_label(method), color=get_plot_color(method))
 
     end_of_x_axis = 0
     xticks = [end_of_x_axis]
@@ -227,7 +275,7 @@ def plot_acc_train(results, domains, args):
     plt.xlabel("Task")
     plt.ylabel("Accuracy [%]")
     if args.save_results:
-        plt.savefig(os.path.join(RESULTS_FOLDER, args.results_name, 'train_acc_plot'))
+        plt.savefig(os.path.join(RESULTS_FOLDER, args.results_name, 'train_batchwise_acc_plot'))
     else:
         plt.show()
         
@@ -275,7 +323,7 @@ def plot_per_class_acc(results, domains, args):
 
             class_id += 1
 
-        ax.set_title(method)
+        ax.set_title(get_label(method))
         ax.set_xticks(range(len(domains)))
         ax.set_xticklabels(domains)
         ax.grid(axis='both')
@@ -344,7 +392,7 @@ def plot_pred_class_ratio(results, domains, args):
 
             class_id += 1
 
-        ax.set_title(method)
+        ax.set_title(get_label(method))
         ax.set_xticks(range(len(domains)))
         ax.set_xticklabels(domains)
         ax.grid(axis='both')
@@ -358,7 +406,7 @@ def plot_pred_class_ratio(results, domains, args):
         fig.legend(handles, labels, loc='lower center')
         
         fig.suptitle("Per class preds vs samples ratio", fontsize="x-large")
-        
+    
     for ax in axs.reshape(-1):
         ax.set_ylim(min_y_val, max_y_val)
 
@@ -369,10 +417,11 @@ def plot_pred_class_ratio(results, domains, args):
         
 def plot_plot_per_timeofday_acc(results, domains, args):
     fig, ax = plt.subplots(figsize=(10, 7))
-    avg_accs = {'day': [], 'night': []}
-    print("\nDay vs night results")
+    avg_accs = {'day': [], 'dawn/dusk': [], 'night': []}
+
+    print("\nTime of day results")
     for method in LOGS_TO_USE:
-        sum_day, sum_night, num_day, num_night = 0, 0, 0, 0
+        sum_day, sum_night, sum_dawndusk, num_day, num_night, num_dawndusk = 0, 0, 0, 0, 0, 0
         for domain, accs in zip(domains, results[method]["Top1_Acc_MB/train_phase/train_stream"]):
             # day for SHIFT, T1 and T3 are day sequences of CLAD
             if 'day' in domain or 'T1' in domain or 'T3' in domain:
@@ -383,18 +432,38 @@ def plot_plot_per_timeofday_acc(results, domains, args):
             elif 'night' in domain or 'T0' in domain or 'T2' in domain or 'T4' in domain:
                 sum_night = np.sum(accs)
                 num_night = len(accs)
-
-        avg_accs['day'].append((sum_day / num_day) * 100)
-        avg_accs['night'].append((sum_night / num_night) * 100)
+            
+            elif 'dawn/dusk' in domain:
+                sum_dawndusk = np.sum(accs)
+                num_dawndusk = len(accs)
+                
+        if num_day != 0:
+            avg_accs['day'].append((sum_day / num_day) * 100)
+        if num_night != 0:
+            avg_accs['night'].append((sum_night / num_night) * 100)
+        if num_dawndusk != 0:
+            avg_accs['dawn/dusk'].append((sum_dawndusk / num_dawndusk) * 100)
         
-        print(f"- {method}: \tAcc day: {avg_accs['day'][-1]:.1f}, \tAcc night: {avg_accs['night'][-1]:.1f}")
-        print(f"  {' ' * len(method)}  \tClass error day: {100 - avg_accs['day'][-1]:.1f}, \tClass error night: {100 - avg_accs['night'][-1]:.1f}")
-
-    width = 0.3
-    plt.xticks(range(len(LOGS_TO_USE)), LOGS_TO_USE, rotation=45)
-    plt.title(f"Avg train accuracy day/night")
-    ax.bar(np.array(range(len(LOGS_TO_USE))) - (width / 2), avg_accs['day'], color='gold', width=width, label='day')
-    ax.bar(np.array(range(len(LOGS_TO_USE))) + (width / 2), avg_accs['night'], color='darkblue', width=width, label='night')
+        to_print_acc = f"- {method}: "
+        to_print_err = f"  {' ' * len(method)} "
+        for timeofday in avg_accs.keys():
+            if len(avg_accs[timeofday]) > 0:
+                to_print_acc += f"\tAcc {timeofday}: {avg_accs[timeofday][-1]:.1f} "
+                to_print_err += f"\tClass error {timeofday}: {100 - avg_accs[timeofday][-1]:.1f} "
+                
+        print(to_print_acc)
+        print(to_print_err)
+        
+    width = 0.25
+    plt.xticks(range(len(LOGS_TO_USE)), [get_label(log) for log in LOGS_TO_USE], rotation=45)
+    plt.title(f"Avg train accuracy time of day")
+    if len(avg_accs['dawn/dusk']) > 0:
+        ax.bar(np.array(range(len(LOGS_TO_USE))) - width, avg_accs['day'], color='gold', width=width, label='day')
+        ax.bar(np.array(range(len(LOGS_TO_USE))), avg_accs['dawn/dusk'], color='orange', width=width, label='dawn/dusk')
+        ax.bar(np.array(range(len(LOGS_TO_USE))) + width, avg_accs['night'], color='darkblue', width=width, label='night')
+    else:
+        ax.bar(np.array(range(len(LOGS_TO_USE))) - (width / 2), avg_accs['day'], color='gold', width=width, label='day')
+        ax.bar(np.array(range(len(LOGS_TO_USE))) + (width / 2), avg_accs['night'], color='darkblue', width=width, label='night')
     ax.set_xlabel("Method")
     ax.set_ylabel("Accuracy [%]")
     ax.grid(axis='both')
@@ -402,9 +471,11 @@ def plot_plot_per_timeofday_acc(results, domains, args):
     plt.tight_layout()
 
     if args.save_results:
-        plt.savefig(os.path.join(RESULTS_FOLDER, args.results_name, 'avg_train_acc_and_time.png'))
+        plt.savefig(os.path.join(RESULTS_FOLDER, args.results_name, 'timeofday_acc.png'))
     else:
         plt.show()
+        
+    return avg_accs
 
 def frozen_related_results_plot(per_domain_avg_accs_train, domains, args):
     fig, ax = plt.subplots(figsize=(10, 7))
@@ -423,7 +494,7 @@ def frozen_related_results_plot(per_domain_avg_accs_train, domains, args):
                                   per_domain_avg_accs_train[frozen_method_log])
         ax.scatter(per_domain_avg_accs_train[frozen_method_log],
                    subtraction,
-                   label=method,
+                   label=get_label(method),
                    color=get_plot_color(method))
         ys.extend(subtraction)
         
@@ -456,8 +527,8 @@ def main(args):
         copy_config_files()
 
     domains = get_and_check_domains()
-    results = load_results()
-
+    results = load_results(domains)
+    
     # =======================================================================================
     table = [["method", *domains, "Avg"], *[[] for i in range(len(LOGS_TO_USE))]]
     avg_accs_train = []
@@ -465,11 +536,7 @@ def main(args):
     for i, method in enumerate(LOGS_TO_USE):
         table[i + 1].append(method)
         flattened_results = []
-        for j, single_domain in enumerate(results[method]["Top1_Acc_MB/train_phase/train_stream"]):
-
-            # if domains[j] in domains[:j]:
-            #     break
-            
+        for single_domain in results[method]["Top1_Acc_MB/train_phase/train_stream"]:
             single_domain_avg_acc = np.mean(single_domain) * 100.0
             per_domain_avg_accs_train[method].append(single_domain_avg_acc)
             table[i + 1].append(single_domain_avg_acc)
@@ -490,7 +557,9 @@ def main(args):
     # =======================================================================================
     plot_avgtime_avgacc(results, avg_accs_train, args)
     # =======================================================================================
-    plot_acc_train(results, domains, args)
+    plot_batchwise_acc_train(results, domains, args)
+    # =======================================================================================    
+    plot_domainwise_acc_train(results, domains, args)
     # =======================================================================================
     plot_acc_val(results, domains, args)
     # =======================================================================================
@@ -501,10 +570,51 @@ def main(args):
         plot_pred_class_ratio(results, domains, args)
     # =======================================================================================
     if 'shift' in LOGS_TO_USE[0] or 'clad' in LOGS_TO_USE[0]:
-        plot_plot_per_timeofday_acc(results, domains, args)
-    # # =======================================================================================
+        per_time_of_day_accs = plot_plot_per_timeofday_acc(results, domains, args)
+    # =======================================================================================
     # if 'frozen' in ''.join(LOGS_TO_USE):
     #     frozen_related_results_plot(per_domain_avg_accs_train, domains, args)
+    
+    # accs = np.array(list(per_time_of_day_accs.values())).T
+    
+    # fig, ax = plt.subplots(figsize=(10, 7))
+    
+    # for i, method in enumerate(LOGS_TO_USE):
+    #     if 'frozen' in method:
+    #         frozen_method_log_idx = i
+    
+    # ys = []
+    # for i, method in enumerate(LOGS_TO_USE):
+    #     if i == frozen_method_log_idx or 'finetune' in method:
+    #         continue
+        
+    #     subtraction = np.subtract(accs[i],
+    #                               accs[frozen_method_log_idx])
+    #     ax.scatter(accs[frozen_method_log_idx],
+    #                subtraction,
+    #                label=get_label(method),
+    #                color=get_plot_color(method))
+    #     ys.extend(subtraction)
+
+    # xs = list(accs[frozen_method_log_idx]) * (len(LOGS_TO_USE) - 2)
+    # # calculate equation for trendline
+    # z = np.polyfit(xs, ys, 1)
+    # p = np.poly1d(z)
+
+    # # add trendline to plot
+    # ax.plot(xs, p(xs), 'y--', label='Trend')
+
+    # ax.set_title("Frozen-related accuracy")
+    # ax.set_xlabel("Frozen avg acc [%]")
+    # ax.set_ylabel("method avg acc - frozen avg acc [%]")
+    # ax.grid(axis='both')
+    # plt.legend(loc='best')
+    # plt.tight_layout()
+    
+    # if args.save_results:
+    #     plt.savefig(os.path.join(RESULTS_FOLDER, args.results_name, 'frozen_related_results.png'))
+    # else:
+    #     plt.show()
 
 
 if __name__ == "__main__":
