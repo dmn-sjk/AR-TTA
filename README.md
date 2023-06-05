@@ -37,7 +37,7 @@ git clone https://github.com/dmn-sjk/CLAD.git
 6. Add CLAD repository to python path:
 
 ```bash
-export PYTHONPATH=$PYTHONPATH:[clad_repository_folder]
+export PYTHONPATH=$PYTHONPATH:<clad_repository_folder>
 ```
 
 ## Datasets setup:
@@ -46,7 +46,7 @@ export PYTHONPATH=$PYTHONPATH:[clad_repository_folder]
 
 ```bash
 cd shift-dev
-python download.py --view front --group img --split all --framerate images [target_dir]
+python download.py --view front --group "[img, det_2d]" --split all --framerate images <TARGET_DIR>
 ```
 
 ### CLAD
@@ -67,7 +67,7 @@ tar -xvf CIFAR-10-C.tar
 ```
 3. Use `process_cifar.py` script from `utils` folder preprocess the cifar datasets:
 ```bash
-python utils/process_cifar.py cifar-10c [path_to_CIFAR10C_dataset] [path_to_CIFAR10_dataset]
+python utils/process_cifar.py cifar-10c <path_to_CIFAR10C_dataset> <path_to_CIFAR10_dataset>
 ```
 
 ## Example source train:
