@@ -48,7 +48,8 @@ def get_custom_strategy(cfg, model: torch.nn.Module, eval_plugin: EvaluationPlug
                                                         classification_img_size=cfg['img_size'])
         elif cfg['dataset'] == 'clad':
             # TODO: for now val set has all the domains, maybe modify for only daytime and depending on the possibilities match the weather with train set 
-            train_dataset = clad.get_cladc_train(cfg['data_root'], transform=None, sequence_type='source')[0]
+            train_dataset = clad.get_cladc_train(cfg['data_root'], transform=None, sequence_type='source',
+                                                 img_size=cfg['img_size'])[0]
         else:
             raise NotImplementedError
 
