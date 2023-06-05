@@ -119,14 +119,15 @@ class Custom(nn.Module):
         if self.features_distillation_weight != 0:
             source_features = self.model_source.get_features(self.features_layer)
 
-        # make accurate pseudo-labels for injected replay samples, since we have the labels
-        replay_pseudo_labels = torch.nn.functional.one_hot(self.memory['labels'][random_order_idxs], 
-                                                           num_classes=self.cfg['num_classes'])\
-                                                               .to(torch.float32)\
-                                                               .to(self.cfg['device'])
-        # to have approximately one hot encoding after later softmax operation
-        replay_pseudo_labels *= 1e6
-        source_outputs[-self.num_replay_samples:] = replay_pseudo_labels
+        if self.memory is not None:
+            # make accurate pseudo-labels for injected replay samples, since we have the labels
+            replay_pseudo_labels = torch.nn.functional.one_hot(self.memory['labels'][random_order_idxs], 
+                                                            num_classes=self.cfg['num_classes'])\
+                                                                .to(torch.float32)\
+                                                                .to(self.cfg['device'])
+            # to have approximately one hot encoding after later softmax operation
+            replay_pseudo_labels *= 1e6
+            source_outputs[-self.num_replay_samples:] = replay_pseudo_labels
         
         # anchor_prob = torch.nn.functional.softmax(self.model_source(x), dim=1).max(1)[0]
         # # Threshold choice discussed in supplementary
