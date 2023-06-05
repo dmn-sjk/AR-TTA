@@ -18,7 +18,7 @@ conda activate conti_adapt
 3. Clone fork of shift-dev repository to your desired location:
 
 ```bash
-git clone https://github.com/dmn-sjk/shift-dev.git
+git clone -b domain_selection https://github.com/dmn-sjk/shift-dev.git
 ```
 
 4. Install shift-dev package with symbolic links in case of modifications
