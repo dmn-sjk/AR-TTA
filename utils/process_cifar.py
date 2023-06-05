@@ -128,14 +128,13 @@ def process_original_data(org_dir, cor_dir, dataset):
 
 if __name__=="__main__":
     # get directory names to save data
-    
-    if len(sys.argv) - 1 != 3:
-        error_msg = 'Wrong number of command line arguments. Provide:\
+    error_msg = 'Wrong number of command line arguments. Provide:\
                 \n\t1. dataset type (cifar-10c | cifar-100c)\
                 \n\t2. path to corrupted dataset\
                 \n\t3. path to original dataset'
-        raise AssertionError(error_msg)
-    
+
+    assert len(sys.argv) - 1 == 3, error_msg
+        
     dataset = sys.argv[1]
     corrupted_dataset_path = sys.argv[2]
     original_dataset_path = sys.argv[3]
