@@ -7,4 +7,7 @@ nesterov: true
 
 # my modifications:
 distillation_out_temp: 1 # of ditillation loss of output
-features_distillation_weight: 4 # distillation on feature level weight with respect to loss
+features_distillation_weight: 0 # distillation on feature level weight with respect to loss
+exemplars: true
+memory_per_class: 50
+num_replay_samples: 10

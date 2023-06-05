@@ -55,14 +55,18 @@ def update_ema_variables(ema_model, model, alpha_teacher):
 
 
 class Custom(nn.Module):
-    def __init__(self, model, optimizer, steps=1, img_size: int = 64, 
-                 distillation_out_temp: int = 1, features_distillation_weight: float = 1):
+    def __init__(self, model, optimizer, cfg: dict, steps=1, img_size: int = 64,
+                 distillation_out_temp: int = 1, features_distillation_weight: float = 1,
+                 memory: dict = None, num_replay_samples: int = 10):
         super().__init__()
         
         self.model = model
         self.optimizer = optimizer
         self.steps = steps
         self.features_distillation_weight = features_distillation_weight
+        self.memory = memory
+        self.cfg = cfg
+        self.num_replay_samples = num_replay_samples
         assert steps > 0, "custom requires >= 1 step(s) to forward and update"
         
         self.model_state, self.optimizer_state, self.model_ema, self.model_source = \
@@ -102,26 +106,43 @@ class Custom(nn.Module):
 
     @torch.enable_grad()  # ensure grads in possible no grad context for testing
     def forward_and_adapt(self, x, model, optimizer):
+        
+        # inject samples from memory
+        if self.memory is not None:
+            random_order_idxs = torch.randint(high=len(self.memory['labels']),
+                                              size=(self.num_replay_samples,))
+            x = torch.cat((x, self.memory['x'][random_order_idxs].to(self.cfg['device'])), dim=0)
+        
         outputs = self.model(x)
         source_outputs = self.model_source(x)
+
         if self.features_distillation_weight != 0:
             source_features = self.model_source.get_features(self.features_layer)
+
+        # make accurate pseudo-labels for injected replay samples, since we have the labels
+        replay_pseudo_labels = torch.nn.functional.one_hot(self.memory['labels'][random_order_idxs], 
+                                                           num_classes=self.cfg['num_classes'])\
+                                                               .to(torch.float32)\
+                                                               .to(self.cfg['device'])
+        # to have approximately one hot encoding after later softmax operation
+        replay_pseudo_labels *= 1e6
+        source_outputs[-self.num_replay_samples:] = replay_pseudo_labels
         
         # anchor_prob = torch.nn.functional.softmax(self.model_source(x), dim=1).max(1)[0]
         # # Threshold choice discussed in supplementary
         # if anchor_prob.mean(0)<self.ap:
         # Augmentation-averaged Prediction
-        N = 32
-        outputs_emas = []
-        for i in range(N):
-            outputs_  = self.model_source(self.transform(x)).detach()
-            outputs_emas.append(outputs_)
+        # N = 32
+        # outputs_emas = []
+        # for i in range(N):
+        #     outputs_  = self.model_source(self.transform(x)).detach()
+        #     outputs_emas.append(outputs_)
 
-        augs_outputs = torch.stack(outputs_emas).mean(0)
+        # augs_outputs = torch.stack(outputs_emas).mean(0)
         # else:
         #     outputs_ema = standard_ema
 
-        loss = (softmax_entropy(outputs / self.distillation_out_temp, augs_outputs / self.distillation_out_temp)).mean(0)
+        loss = (softmax_entropy(outputs / self.distillation_out_temp, source_outputs / self.distillation_out_temp)).mean(0)
 
         if self.features_distillation_weight != 0:
             loss += self.features_distillation_weight * nn.functional.mse_loss(torch.flatten(self.model.get_features(self.features_layer)),
@@ -143,6 +164,10 @@ class Custom(nn.Module):
                         mask = (torch.rand(p.shape)<self.rst).float().cuda() 
                         with torch.no_grad():
                             p.data = self.model_state[f"{nm}.{npp}"] * mask + p * (1.-mask)
+        
+        if self.memory is not None:
+            outputs = outputs[:-self.num_replay_samples]
+
         return outputs
 
 
