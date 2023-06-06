@@ -111,8 +111,9 @@ class Custom(nn.Module):
         if self.memory is not None:
             random_order_idxs = torch.randint(high=len(self.memory['labels']),
                                               size=(self.num_replay_samples,))
-            x = torch.cat((x, self.memory['x'][random_order_idxs].to(self.cfg['device'])), dim=0)
-        
+            replay_x = self.transform(self.memory['x'][random_order_idxs]).to(self.cfg['device'])
+            x = torch.cat((x, replay_x), dim=0)
+
         outputs = self.model(x)
         source_outputs = self.model_source(x)
 
@@ -191,7 +192,6 @@ def collect_params(model):
                 if np in ['weight', 'bias'] and p.requires_grad:
                     params.append(p)
                     names.append(f"{nm}.{np}")
-                    print(nm, np)
     return params, names
 
 

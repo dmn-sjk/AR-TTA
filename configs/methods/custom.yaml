@@ -5,9 +5,13 @@ weight_decay: 0.
 steps: 1
 nesterov: true
 
-# my modifications:
+# -- my modifications --:
+
+## distillation
 distillation_out_temp: 1 # of ditillation loss of output
 features_distillation_weight: 0 # distillation on feature level weight with respect to loss
-exemplars: true
+
+## exemplars
+exemplars: false
 memory_per_class: 50
 num_replay_samples: 10
