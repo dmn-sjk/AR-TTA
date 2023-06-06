@@ -20,7 +20,7 @@ import clad
 
 
 def get_custom_strategy(cfg, model: torch.nn.Module, eval_plugin: EvaluationPlugin, plugins: Sequence):
-    model = custom.configure_model(model)
+    model = custom.configure_model(model, cfg['num_first_blocks_for_update'])
     params, param_names = custom.collect_params(model)
 
     if cfg['optimizer'] == 'adam':

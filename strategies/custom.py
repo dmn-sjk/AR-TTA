@@ -8,6 +8,7 @@ import torch.nn as nn
 import torch.jit
 import PIL
 import torchvision.transforms as transforms
+import re
 
 import utils.cotta_transforms as my_transforms
 from utils.intermediate_features import IntermediateFeaturesGetter
@@ -212,22 +213,30 @@ def load_model_and_optimizer(model, optimizer, model_state, optimizer_state):
     optimizer.load_state_dict(optimizer_state)
 
 
-def configure_model(model):
+def configure_model(model, num_first_blocks_for_update: int = -1):
     """Configure model for use with tent."""
     # train mode, because tent optimizes the model to minimize entropy
     model.train()
     # disable grad, to (re-)enable only what we update
     model.requires_grad_(False)
     # enable all trainable
-    for m in model.modules():
-        if isinstance(m, nn.BatchNorm2d):
-            m.requires_grad_(True)
+    # first module is the whole network
+    for name, module in list(model.named_modules())[1:]:
+        if num_first_blocks_for_update != -1 and \
+            ('layer' in name or 'block' in name):
+            starting_string = name.split('.')[0]
+            block_nr = int(re.search(r'\d+$', starting_string).group())
+            if block_nr > num_first_blocks_for_update:
+                break
+
+        module.requires_grad_(True)
+
+        if isinstance(module, nn.BatchNorm2d):
             # force use of batch stats in train and eval modes
-            m.track_running_stats = False
-            m.running_mean = None
-            m.running_var = None
-        else:
-            m.requires_grad_(True)
+            module.track_running_stats = False
+            module.running_mean = None
+            module.running_var = None
+
     return model
 
 

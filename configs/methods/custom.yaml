@@ -15,3 +15,5 @@ features_distillation_weight: 0 # distillation on feature level weight with resp
 exemplars: false
 memory_per_class: 50
 num_replay_samples: 10
+
+num_first_blocks_for_update: -1

@@ -16,7 +16,7 @@ def main():
                                  else "cpu")
     
     experiment_name = get_experiment_name(cfg)
-    print(f"\n======================================\nExperiment name: {experiment_name}\n======================================\n")
+    print(f"\n{(len(experiment_name) + 17) * '='}\nExperiment name: {experiment_name}\n{(len(experiment_name) + 17) * '='}\n")
 
     if cfg['seed'] is not None:
         set_seed(cfg['seed'])
