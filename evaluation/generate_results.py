@@ -16,7 +16,7 @@ LOGS_TO_USE = []
 RESULTS_FOLDER = 'results'
 LOGS_FOLDER = 'logs'
 WINDOW_SIZE = 500 # for batch-wise train acc plot
-DISCARD_REPEATED_DOMAINS = True
+DISCARD_REPEATED_DOMAINS = False
 POSSIBLE_METHODS = ['cotta', 'eata', 'tent', 'frozen', 'finetune', 'sar', 'custom']
 USELESS_COLORS = ['gainsboro', 'snow', 'mistyrose', 'seashell', 'linen', 'oldlace',
                   'comsilk', 'ivory', 'lightyellow', 'honeydew', 'azure', 'aliceblue',
@@ -224,9 +224,11 @@ def plot_acc_val(results, domains, args):
             plt.show()
             
 def plot_domainwise_acc_train(results, domains, args):
-    fig, ax = plt.subplots(nrows=1, ncols=1)
+    fig, ax = plt.subplots(nrows=1, ncols=1, figsize=(15,10))
     for method in LOGS_TO_USE:
-        accs = np.array(results[method]["Top1_Acc_MB/train_phase/train_stream"]).mean(1) * 100.0
+        accs = []
+        for domain_res in results[method]["Top1_Acc_MB/train_phase/train_stream"]:
+            accs.append(np.mean(domain_res) * 100.0)
         ax.plot(range(len(accs)), accs, marker='.', label=get_label(method), color=get_plot_color(method))
 
     plt.xticks(range(len(domains)), domains, rotation=45)
@@ -418,6 +420,7 @@ def plot_pred_class_ratio(results, domains, args):
 def plot_plot_per_timeofday_acc(results, domains, args):
     fig, ax = plt.subplots(figsize=(10, 7))
     avg_accs = {'day': [], 'dawn/dusk': [], 'night': []}
+    min_acc_val = 100
 
     print("\nTime of day results")
     for method in LOGS_TO_USE:
@@ -436,13 +439,19 @@ def plot_plot_per_timeofday_acc(results, domains, args):
             elif 'dawn/dusk' in domain:
                 sum_dawndusk = np.sum(accs)
                 num_dawndusk = len(accs)
-                
+
+        acc_day, acc_night, acc_dawndusk = 100, 100, 100
         if num_day != 0:
-            avg_accs['day'].append((sum_day / num_day) * 100)
+            acc_day = (sum_day / num_day) * 100
+            avg_accs['day'].append(acc_day)
         if num_night != 0:
-            avg_accs['night'].append((sum_night / num_night) * 100)
+            acc_night = (sum_night / num_night) * 100
+            avg_accs['night'].append(acc_night)
         if num_dawndusk != 0:
-            avg_accs['dawn/dusk'].append((sum_dawndusk / num_dawndusk) * 100)
+            acc_dawndusk = (sum_dawndusk / num_dawndusk) * 100
+            avg_accs['dawn/dusk'].append(acc_dawndusk)
+
+        min_acc_val = np.min([acc_day, acc_night, acc_dawndusk, min_acc_val])
         
         to_print_acc = f"- {method}: "
         to_print_err = f"  {' ' * len(method)} "
@@ -466,6 +475,7 @@ def plot_plot_per_timeofday_acc(results, domains, args):
         ax.bar(np.array(range(len(LOGS_TO_USE))) + (width / 2), avg_accs['night'], color='darkblue', width=width, label='night')
     ax.set_xlabel("Method")
     ax.set_ylabel("Accuracy [%]")
+    ax.set_ylim(min_acc_val - 5, 100)
     ax.grid(axis='both')
     plt.legend(loc='best')
     plt.tight_layout()
@@ -544,7 +554,7 @@ def main(args):
 
         avg_acc_train = np.mean(flattened_results) * 100.0
 
-        print(f'- {method}: \tAcc: {avg_acc_train:.1f}, \tClassification error: {100 - avg_acc_train:.1f}')
+        print(f'- {method}: \tAcc: {avg_acc_train:.2f}, \tClassification error: {100 - avg_acc_train:.2f}')
         table[i + 1].append(avg_acc_train)
         
         avg_accs_train.append(avg_acc_train)

@@ -9,6 +9,7 @@ import torch.jit
 import PIL
 import torchvision.transforms as transforms
 import re
+import numpy as np
 
 import utils.cotta_transforms as my_transforms
 from utils.intermediate_features import IntermediateFeaturesGetter
@@ -108,28 +109,54 @@ class Custom(nn.Module):
     @torch.enable_grad()  # ensure grads in possible no grad context for testing
     def forward_and_adapt(self, x, model, optimizer):
         
+        x_for_source, x_for_model_update = x, x
+        
         # inject samples from memory
         if self.memory is not None:
             random_order_idxs = torch.randint(high=len(self.memory['labels']),
                                               size=(self.num_replay_samples,))
-            replay_x = self.transform(self.memory['x'][random_order_idxs]).to(self.cfg['device'])
-            x = torch.cat((x, replay_x), dim=0)
+            
+            replay_x = self.memory['x'][random_order_idxs].to(self.cfg['device'])
+            if 'mixup' in self.cfg['replay_augs']:
+                alpha = 0.4
+                lam = np.random.beta(alpha, alpha)
+                mixupped_x = lam * x + (1 - lam) * replay_x
+                
+                x_for_model_update = mixupped_x
+            else:
+                if self.cfg['replay_augs'] == 'cotta':
+                    replay_x = self.transform(replay_x)
 
-        outputs = self.model(x)
-        source_outputs = self.model_source(x)
+                x_for_source = torch.cat((x_for_source, replay_x), dim=0)
+                x_for_model_update = x_for_source
+
+        outputs_update = self.model(x_for_model_update)
+        source_outputs = self.model_source(x_for_source)
+        
+        pseudo_labels = source_outputs
+        # whether to apply softmax on targets while calculating cross entropy
+        softmax_targets = True
 
         if self.features_distillation_weight != 0:
             source_features = self.model_source.get_features(self.features_layer)
 
         if self.memory is not None:
             # make accurate pseudo-labels for injected replay samples, since we have the labels
-            replay_pseudo_labels = torch.nn.functional.one_hot(self.memory['labels'][random_order_idxs], 
-                                                            num_classes=self.cfg['num_classes'])\
-                                                                .to(torch.float32)\
-                                                                .to(self.cfg['device'])
-            # to have approximately one hot encoding after later softmax operation
-            replay_pseudo_labels *= 1e6
-            source_outputs[-self.num_replay_samples:] = replay_pseudo_labels
+            replay_pseudo_labels = torch.nn.functional.one_hot(self.memory['labels'][random_order_idxs],
+                                                               num_classes=self.cfg['num_classes'])\
+                .to(torch.float32)\
+                .to(self.cfg['device'])
+                
+            if self.cfg['replay_augs'] == 'cotta':
+                # to have approximately one hot encoding after later softmax operation
+                replay_pseudo_labels *= 1e6
+                pseudo_labels[-self.num_replay_samples:] = replay_pseudo_labels
+                softmax_targets = True
+
+            elif 'mixup' in self.cfg['replay_augs']:
+                pseudo_labels = lam * pseudo_labels.softmax(1) + (1 - lam) * replay_pseudo_labels
+                softmax_targets = False
+
         
         # anchor_prob = torch.nn.functional.softmax(self.model_source(x), dim=1).max(1)[0]
         # # Threshold choice discussed in supplementary
@@ -145,7 +172,7 @@ class Custom(nn.Module):
         # else:
         #     outputs_ema = standard_ema
 
-        loss = (softmax_entropy(outputs / self.distillation_out_temp, source_outputs / self.distillation_out_temp)).mean(0)
+        loss = softmax_entropy(outputs_update / self.distillation_out_temp, pseudo_labels / self.distillation_out_temp, softmax_targets).mean(0)
 
         if self.features_distillation_weight != 0:
             loss += self.features_distillation_weight * nn.functional.mse_loss(torch.flatten(self.model.get_features(self.features_layer)),
@@ -167,17 +194,17 @@ class Custom(nn.Module):
                         mask = (torch.rand(p.shape)<self.rst).float().cuda() 
                         with torch.no_grad():
                             p.data = self.model_state[f"{nm}.{npp}"] * mask + p * (1.-mask)
-        
-        if self.memory is not None:
-            outputs = outputs[:-self.num_replay_samples]
 
-        return outputs
+        return self.model(x)
 
 
 @torch.jit.script
-def softmax_entropy(x, x_ema):# -> torch.Tensor:
+def softmax_entropy(x, x_ema, softmax_targets: bool = True):# -> torch.Tensor:
     """Entropy of softmax distribution from logits."""
-    return -(x_ema.softmax(1) * x.log_softmax(1)).sum(1)
+    if softmax_targets:
+        return -(x_ema.softmax(1) * x.log_softmax(1)).sum(1)
+    else:
+        return -(x_ema * x.log_softmax(1)).sum(1)
 
 def collect_params(model):
     """Collect all trainable parameters.
@@ -219,6 +246,10 @@ def configure_model(model, num_first_blocks_for_update: int = -1):
     model.train()
     # disable grad, to (re-)enable only what we update
     model.requires_grad_(False)
+
+    if num_first_blocks_for_update == 0:
+        return model
+    
     # enable all trainable
     # first module is the whole network
     for name, module in list(model.named_modules())[1:]:

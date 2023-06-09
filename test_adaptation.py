@@ -2,7 +2,7 @@ import torch
 import os
 import yaml
 
-from utils.utils import set_seed, get_experiment_name, get_experiment_folder
+from utils.utils import set_seed, get_experiment_name, get_experiment_folder, get_git_revision_hash
 from utils.config_parser import ConfigParser
 from benchmarks import get_benchmark
 from strategies import get_strategy
@@ -25,6 +25,8 @@ def main():
     strategy = get_strategy(cfg)
 
     if cfg['save_results']:
+        cfg['git_commit'] = get_git_revision_hash()
+
         # save config
         with open(os.path.join(get_experiment_folder(cfg), experiment_name + '_config.yaml'), 'w') as f:
             yaml.dump(cfg, f, default_flow_style=False)
