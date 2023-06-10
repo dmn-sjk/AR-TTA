@@ -191,6 +191,18 @@ def get_shift_benchmark(cfg) -> GenericCLScenario:
         train_sets, val_sets, domains = _get_domains_hard_sets(cfg)
     else:
         raise ValueError("Unknown type of shift benchmark")
+    
+    if cfg['end_with_source_domain']:
+        train_sets.append(SHIFTClassificationDataset(split='val',
+                                                     data_root=cfg['data_root'],
+                                                     transforms=get_transforms(cfg, train=False),
+                                                     weathers_coarse=[
+                                                         WeathersCoarse.clear],
+                                                     timeofdays_coarse=[
+                                                         TimesOfDayCoarse.daytime],
+                                                     backend=ZipBackend(),
+                                                     classification_img_size=cfg['img_size']))
+        domains.append(f"{TimesOfDayCoarse.daytime}_{WeathersCoarse.clear}")
 
     cfg['domains'] = domains
 
