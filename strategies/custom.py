@@ -124,18 +124,24 @@ class Custom(nn.Module):
                 mixupped_x = lam * x + (1 - lam) * replay_x
                 
                 x_for_model_update = mixupped_x
-            else:
-                if self.cfg['replay_augs'] == 'cotta':
-                    replay_x = self.transform(replay_x)
-                elif self.cfg['replay_augs'] == 'mixup_within_memory':
-                    alpha = 0.4
-                    lam = np.random.beta(alpha, alpha)
-                    random_idxs = torch.randperm(self.num_replay_samples)
-                    replay_x = lam * replay_x + (1 - lam) * replay_x[random_idxs]
+            elif self.cfg['replay_augs'] == 'cotta':
+                replay_x = self.transform(replay_x)
 
                 x_for_source = torch.cat((x_for_source, replay_x), dim=0)
                 x_for_model_update = x_for_source
+                
+            elif self.cfg['replay_augs'] == 'mixup_within_memory':
+                alpha = 0.4
+                lam = np.random.beta(alpha, alpha)
+                random_idxs = torch.randperm(self.num_replay_samples)
+                replay_x = lam * replay_x + (1 - lam) * replay_x[random_idxs]
 
+                x_for_source = torch.cat((x_for_source, replay_x), dim=0)
+                x_for_model_update = x_for_source
+            else:
+                raise ValueError(f"Unknown replay augs strategy name: {self.cfg['replay_augs']}")
+
+                
         outputs_update = self.model(x_for_model_update)
         source_outputs = self.model_source(x_for_source)
         
@@ -169,6 +175,9 @@ class Custom(nn.Module):
             elif self.cfg['replay_augs'] == 'mixup_from_memory':
                 pseudo_labels = lam * pseudo_labels.softmax(1) + (1 - lam) * replay_pseudo_labels
                 softmax_targets = False
+                
+            else:
+                raise ValueError(f"Unknown replay augs strategy name: {self.cfg['replay_augs']}")
 
         
         # anchor_prob = torch.nn.functional.softmax(self.model_source(x), dim=1).max(1)[0]
