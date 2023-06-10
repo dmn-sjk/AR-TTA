@@ -20,8 +20,86 @@ import clad
 
 
 def get_custom_strategy(cfg, model: torch.nn.Module, eval_plugin: EvaluationPlugin, plugins: Sequence):
-    model = custom.configure_model(model, cfg['num_first_blocks_for_update'])
+    
+    params_for_update = None
+    if cfg['choose_params_with_fisher']:
+        fisher_batch_size = 64
+        if cfg['dataset'] == 'cifar10c':
+            fisher_dataset = CIFAR10CDataset(cfg['data_root'], corruption=None, split='test', transforms=None)
+        elif cfg['dataset'] == 'shift':
+            fisher_dataset = SHIFTClassificationDataset(split='val',
+                                                        data_root=cfg['data_root'],
+                                                        transforms=None,
+                                                        weathers_coarse=[WeathersCoarse.clear],
+                                                        timeofdays_coarse=[
+                                                            TimesOfDayCoarse.daytime],
+                                                        backend=ZipBackend(),
+                                                        classification_img_size=cfg['img_size'])
+        elif cfg['dataset'] == 'clad':
+            # TODO: for now val set has all the domains, maybe modify for only daytime and depending on the possibilities match the weather with train set 
+            fisher_dataset = clad.get_cladc_val(cfg['data_root'], transform=None)
+        else:
+            raise NotImplementedError
+        
+        fisher_loader = torch.utils.data.DataLoader(fisher_dataset, batch_size=fisher_batch_size, shuffle=True, 
+                                                        num_workers=cfg['num_workers'], pin_memory=True)
+
+        ewc_optimizer = torch.optim.SGD(model.parameters(), 0.001)
+        fishers = {}
+        train_loss_fn = torch.nn.CrossEntropyLoss().cuda()
+        stop = False
+        for iter_, (images, targets) in enumerate(fisher_loader, start=1):
+            
+            num_seen_samples_after_iter = iter_ * fisher_batch_size
+            if num_seen_samples_after_iter > cfg['fisher_size']:
+                num_samples_to_use = fisher_batch_size - (num_seen_samples_after_iter - cfg['fisher_size'])
+                images = images[:num_samples_to_use]
+                targets = targets[:num_samples_to_use]
+                stop = True
+                
+            if cfg['cuda'] is not None:
+                images = images.cuda(cfg['cuda'], non_blocking=True)
+            if torch.cuda.is_available():
+                targets = targets.cuda(cfg['cuda'], non_blocking=True)
+            outputs = model(images)
+            _, targets = outputs.max(1)
+            loss = train_loss_fn(outputs, targets)
+            loss.backward()
+            for name, param in model.named_parameters():
+                if param.grad is not None:
+                    if iter_ > 1:
+                        fisher = param.grad.data.clone().detach() ** 2 + fishers[name][0]
+                    else:
+                        fisher = param.grad.data.clone().detach() ** 2
+                    if iter_ == len(fisher_loader):
+                        fisher = fisher / iter_
+                    fishers.update({name: fisher})
+            ewc_optimizer.zero_grad()
+
+            if stop:
+                break
+            
+        print("compute fisher matrices finished")
+        del ewc_optimizer
+        del fisher_loader
+            
+        for key in fishers.keys():
+            fishers[key] = fishers[key].sum()
+            
+        all_fisher_vals = torch.Tensor(list(fishers.values()))
+        fishers_median = torch.median(all_fisher_vals)
+        smaller_than_median_mask = all_fisher_vals < fishers_median
+        params_for_update = []
+        for param_name, fisher_val_is_smaller_than_median in zip(fishers.keys(), smaller_than_median_mask):
+            if fisher_val_is_smaller_than_median:
+                params_for_update.append(param_name)
+
+
+    model = custom.configure_model(model, 
+                                   params_for_update=params_for_update, 
+                                   num_first_blocks_for_update=cfg['num_first_blocks_for_update'])
     params, param_names = custom.collect_params(model)
+
 
     if cfg['optimizer'] == 'adam':
         optimizer = torch.optim.Adam(params,

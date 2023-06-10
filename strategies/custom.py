@@ -262,27 +262,32 @@ def load_model_and_optimizer(model, optimizer, model_state, optimizer_state):
     optimizer.load_state_dict(optimizer_state)
 
 
-def configure_model(model, num_first_blocks_for_update: int = -1):
+def configure_model(model, params_for_update: list = None, num_first_blocks_for_update: int = -1):
     """Configure model for use with tent."""
     # train mode, because tent optimizes the model to minimize entropy
     model.train()
     # disable grad, to (re-)enable only what we update
     model.requires_grad_(False)
 
-    if num_first_blocks_for_update == 0:
+    if num_first_blocks_for_update == 0 and params_for_update is not None:
         return model
     
     # enable all trainable
     # first module is the whole network
-    for name, module in list(model.named_modules())[1:]:
+    for module_name, module in list(model.named_modules())[1:]:
         if num_first_blocks_for_update != -1 and \
-            ('layer' in name or 'block' in name):
-            starting_string = name.split('.')[0]
+            ('layer' in module_name or 'block' in module_name):
+            starting_string = module_name.split('.')[0]
             block_nr = int(re.search(r'\d+$', starting_string).group())
             if block_nr > num_first_blocks_for_update:
                 break
 
-        module.requires_grad_(True)
+        if params_for_update is not None:
+            for param_name, param in module.named_parameters():
+                if f"{module_name}.{param_name}" in params_for_update:
+                    param.requires_grad_(True)
+        else:
+            module.requires_grad_(True)
 
         if isinstance(module, nn.BatchNorm2d):
             # force use of batch stats in train and eval modes
