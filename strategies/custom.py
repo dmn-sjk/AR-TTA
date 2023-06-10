@@ -121,7 +121,8 @@ class Custom(nn.Module):
             if self.cfg['replay_augs'] == 'mixup_from_memory':
                 alpha = 0.4
                 lam = np.random.beta(alpha, alpha)
-                mixupped_x = lam * x + (1 - lam) * replay_x
+                print(replay_x[:x.shape[0]].shape)
+                mixupped_x = lam * x + (1 - lam) * replay_x[:x.shape[0]]
                 
                 x_for_model_update = mixupped_x
             elif self.cfg['replay_augs'] == 'cotta':
@@ -173,7 +174,7 @@ class Custom(nn.Module):
                 softmax_targets = False
 
             elif self.cfg['replay_augs'] == 'mixup_from_memory':
-                pseudo_labels = lam * pseudo_labels.softmax(1) + (1 - lam) * replay_pseudo_labels
+                pseudo_labels = lam * pseudo_labels.softmax(1) + (1 - lam) * replay_pseudo_labels[:pseudo_labels.shape[0]]
                 softmax_targets = False
                 
             else:
