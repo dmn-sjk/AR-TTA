@@ -111,13 +111,14 @@ class Custom(nn.Module):
         
         x_for_source, x_for_model_update = x, x
         
+        
         # inject samples from memory
         if self.memory is not None:
             random_order_idxs = torch.randint(high=len(self.memory['labels']),
                                               size=(self.num_replay_samples,))
             
             replay_x = self.memory['x'][random_order_idxs].to(self.cfg['device'])
-            if 'mixup' in self.cfg['replay_augs']:
+            if self.cfg['replay_augs'] == 'mixup_from_memory':
                 alpha = 0.4
                 lam = np.random.beta(alpha, alpha)
                 mixupped_x = lam * x + (1 - lam) * replay_x
@@ -126,6 +127,11 @@ class Custom(nn.Module):
             else:
                 if self.cfg['replay_augs'] == 'cotta':
                     replay_x = self.transform(replay_x)
+                elif self.cfg['replay_augs'] == 'mixup_within_memory':
+                    alpha = 0.4
+                    lam = np.random.beta(alpha, alpha)
+                    random_idxs = torch.randperm(self.num_replay_samples)
+                    replay_x = lam * replay_x + (1 - lam) * replay_x[random_idxs]
 
                 x_for_source = torch.cat((x_for_source, replay_x), dim=0)
                 x_for_model_update = x_for_source
@@ -133,7 +139,7 @@ class Custom(nn.Module):
         outputs_update = self.model(x_for_model_update)
         source_outputs = self.model_source(x_for_source)
         
-        pseudo_labels = source_outputs
+        pseudo_labels = source_outputs.detach().clone()
         # whether to apply softmax on targets while calculating cross entropy
         softmax_targets = True
 
@@ -153,7 +159,14 @@ class Custom(nn.Module):
                 pseudo_labels[-self.num_replay_samples:] = replay_pseudo_labels
                 softmax_targets = True
 
-            elif 'mixup' in self.cfg['replay_augs']:
+            elif self.cfg['replay_augs'] == 'mixup_within_memory':
+                # to have approximately one hot encoding after later softmax operation
+                replay_pseudo_labels = lam * replay_pseudo_labels + (1 - lam) * replay_pseudo_labels[random_idxs]
+                pseudo_labels = pseudo_labels.softmax(1)
+                pseudo_labels[-self.num_replay_samples:] = replay_pseudo_labels
+                softmax_targets = False
+
+            elif self.cfg['replay_augs'] == 'mixup_from_memory':
                 pseudo_labels = lam * pseudo_labels.softmax(1) + (1 - lam) * replay_pseudo_labels
                 softmax_targets = False
 
@@ -161,7 +174,7 @@ class Custom(nn.Module):
         # anchor_prob = torch.nn.functional.softmax(self.model_source(x), dim=1).max(1)[0]
         # # Threshold choice discussed in supplementary
         # if anchor_prob.mean(0)<self.ap:
-        # Augmentation-averaged Prediction
+    # Augmentation-averaged Prediction
         # N = 32
         # outputs_emas = []
         # for i in range(N):
