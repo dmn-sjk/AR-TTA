@@ -121,7 +121,6 @@ class Custom(nn.Module):
             if self.cfg['replay_augs'] == 'mixup_from_memory':
                 alpha = 0.4
                 lam = np.random.beta(alpha, alpha)
-                print(replay_x[:x.shape[0]].shape)
                 mixupped_x = lam * x + (1 - lam) * replay_x[:x.shape[0]]
                 
                 x_for_model_update = mixupped_x
