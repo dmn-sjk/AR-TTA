@@ -84,7 +84,7 @@ def get_custom_strategy(cfg, model: torch.nn.Module, eval_plugin: EvaluationPlug
         del fisher_loader
             
         for key in fishers.keys():
-            fishers[key] = fishers[key].sum()
+            fishers[key] = fishers[key].mean()
             
         all_fisher_vals = torch.Tensor(list(fishers.values()))
         fishers_median = torch.median(all_fisher_vals)
