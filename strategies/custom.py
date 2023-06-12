@@ -206,7 +206,7 @@ class Custom(nn.Module):
         optimizer.step()
         optimizer.zero_grad()
         # Teacher update
-        self.model_ema = update_ema_variables(ema_model = self.model_ema, model = self.model, alpha_teacher=self.mt)
+        self.model_ema = update_ema_variables(ema_model = self.model_ema, model = self.model, alpha_teacher=self.cfg['mt'])
         # Stochastic restore
 
         if False:

@@ -20,5 +20,7 @@ replay_augs: cotta # none | cotta | mixup_from_memory | mixup_within_memory
 num_first_blocks_for_update: -1
 
 fisher_size: 2000
-choose_params_with_fisher: false
+choose_params_with_fisher: true
 
+# ema teacher
+mt: 0.999
