@@ -143,9 +143,11 @@ class Custom(nn.Module):
 
                 
         outputs_update = self.model(x_for_model_update)
-        source_outputs = self.model_source(x_for_source)
+        # source_outputs = self.model_source(x_for_source)
+        ema_outputs = self.model_ema(x_for_source)
         
-        pseudo_labels = source_outputs.detach().clone()
+        # pseudo_labels = source_outputs.detach().clone()
+        pseudo_labels = ema_outputs.detach().clone()
         # whether to apply softmax on targets while calculating cross entropy
         softmax_targets = True
 
@@ -204,7 +206,7 @@ class Custom(nn.Module):
         optimizer.step()
         optimizer.zero_grad()
         # Teacher update
-        # self.model_ema = update_ema_variables(ema_model = self.model_ema, model = self.model, alpha_teacher=self.mt)
+        self.model_ema = update_ema_variables(ema_model = self.model_ema, model = self.model, alpha_teacher=self.mt)
         # Stochastic restore
 
         if False:
