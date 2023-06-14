@@ -69,6 +69,8 @@ class Custom(nn.Module):
         self.memory = memory
         self.cfg = cfg
         self.num_replay_samples = num_replay_samples
+        self.max_entropy_value = np.log(cfg['num_classes'])
+        self.num_samples_update = 0
         assert steps > 0, "custom requires >= 1 step(s) to forward and update"
         
         self.model_state, self.optimizer_state, self.model_ema, self.model_source = \
@@ -109,8 +111,27 @@ class Custom(nn.Module):
     @torch.enable_grad()  # ensure grads in possible no grad context for testing
     def forward_and_adapt(self, x, model, optimizer):
         
-        x_for_source, x_for_model_update = x, x
+        # source_outputs = self.model_source(x_for_source)
+        ema_outputs = self.model_ema(x)
         
+        # pseudo_labels = source_outputs.detach().clone()
+        pseudo_labels = ema_outputs.detach().clone()
+        
+        entropies = softmax_entropy(pseudo_labels, pseudo_labels, softmax_targets=True)
+        max_entropies_fraction = entropies / self.max_entropy_value
+        use_sample_probs = 1 - max_entropies_fraction
+        use_sample_probs[use_sample_probs < 0.1] = 0
+        use_sample_probs[use_sample_probs > 0.8] = 1
+        chosen_samples_mask = torch.rand((x.shape[0],)) < use_sample_probs.cpu()
+
+        num_of_chosen_samples = chosen_samples_mask.int().sum().item()
+        self.num_samples_update += num_of_chosen_samples
+        if num_of_chosen_samples == 0:
+            return self.model(x)
+        
+        x_for_model_update = x[chosen_samples_mask]
+        x_for_source = x_for_model_update
+        pseudo_labels = pseudo_labels[chosen_samples_mask]
         
         # inject samples from memory
         if self.memory is not None:
@@ -121,7 +142,7 @@ class Custom(nn.Module):
             if self.cfg['replay_augs'] == 'mixup_from_memory':
                 alpha = 0.4
                 lam = np.random.beta(alpha, alpha)
-                mixupped_x = lam * x + (1 - lam) * replay_x[:x.shape[0]]
+                mixupped_x = lam * x_for_model_update + (1 - lam) * replay_x[:x_for_model_update.shape[0]]
                 
                 x_for_model_update = mixupped_x
             elif self.cfg['replay_augs'] == 'cotta':
@@ -143,11 +164,13 @@ class Custom(nn.Module):
 
                 
         outputs_update = self.model(x_for_model_update)
-        # source_outputs = self.model_source(x_for_source)
-        ema_outputs = self.model_ema(x_for_source)
         
-        # pseudo_labels = source_outputs.detach().clone()
-        pseudo_labels = ema_outputs.detach().clone()
+        # # source_outputs = self.model_source(x_for_source)
+        # ema_outputs = self.model_ema(x_for_source)
+        
+        # # pseudo_labels = source_outputs.detach().clone()
+        # pseudo_labels = ema_outputs.detach().clone()
+        
         # whether to apply softmax on targets while calculating cross entropy
         softmax_targets = True
 
