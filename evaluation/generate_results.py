@@ -17,12 +17,15 @@ RESULTS_FOLDER = 'results'
 LOGS_FOLDER = 'logs'
 WINDOW_SIZE = 500 # for batch-wise train acc plot
 DISCARD_REPEATED_DOMAINS = False
+NOT_INCLUDE_LAST_DOMAIN_IN_AVERAGE = True
+OLD_CLAD_DOMAIN_NAMES = False
 POSSIBLE_METHODS = ['cotta', 'eata', 'tent', 'frozen', 'finetune', 'sar', 'custom']
 USELESS_COLORS = ['gainsboro', 'snow', 'mistyrose', 'seashell', 'linen', 'oldlace',
                   'comsilk', 'ivory', 'lightyellow', 'honeydew', 'azure', 'aliceblue',
                   'lavender', 'lavenderblush', 'mintcream']
 
 colors = {}
+
 
 def get_label(log_name):
     for method in POSSIBLE_METHODS:
@@ -123,9 +126,10 @@ def parse_args():
     global LOGS_TO_USE
     LOGS_TO_USE = args.log_names
 
-    regex_matches = [log.split('/')[-1] for log in glob.glob(os.path.join('logs', args.logs_regex))]
-    print(f"Num of regex matches: {len(regex_matches)}")
-    LOGS_TO_USE.extend(regex_matches)
+    if args.logs_regex is not None:
+        regex_matches = [log.split('/')[-1] for log in glob.glob(os.path.join('logs', args.logs_regex))]
+        print(f"Num of regex matches: {len(regex_matches)}")
+        LOGS_TO_USE.extend(regex_matches)
         
     if len(LOGS_TO_USE) == 0:
         raise ValueError("Provide log folders' names to generate results from") 
@@ -139,7 +143,7 @@ def get_and_check_domains():
             curr_domains = yaml.load(f, Loader=yaml.Loader)['domains']
             
             if len(curr_domains) == 0:
-                raise ValueError("Empty domains file!")
+                raise ValueError("Empty domains list!")
             
             if len(domains) == 0:
                 domains = curr_domains
@@ -150,14 +154,19 @@ def get_and_check_domains():
                                  - domains in {log} logs folder: {curr_domains}")
     
     if DISCARD_REPEATED_DOMAINS:
+        modified_domains = []
+        accepted_domains_idxs = []
         for i, domain in enumerate(domains):
             if domain in domains[:i]:
-                domains = domains[:i]
-                break
-    
-    return domains
+                continue
+            accepted_domains_idxs.append(i)
+            modified_domains.append(domain)
+            
+        return modified_domains, accepted_domains_idxs
+    else:
+        return domains, list(range(len(domains)))
 
-def load_results(domains):
+def load_results(accepted_domains_idxs):
     results = {}
 
     for log in LOGS_TO_USE:
@@ -166,11 +175,21 @@ def load_results(domains):
             
             if DISCARD_REPEATED_DOMAINS:
                 for key in results[log].keys():
+
+                    modified_results = []
+                    
                     # test_stream have one more value because of initial eval before TTA
                     if 'test_stream' in key:
-                        results[log][key] = results[log][key][:len(domains) + 1]
-                    else:
-                        results[log][key] = results[log][key][:len(domains)]
+                        modified_results.append(results[log][key][0])
+                        
+                    for idx in accepted_domains_idxs:
+                        if 'test_stream' in key:
+                            modified_results.append(results[log][key][idx + 1])
+                        else:
+                            modified_results.append(results[log][key][idx])
+
+                    results[log][key] = modified_results
+
     return results
 
 def copy_config_files():
@@ -180,18 +199,18 @@ def copy_config_files():
         
 def plot_avgtime_avgacc(results, avg_accs_train, args):
     fig, ax = plt.subplots()
-    avg_accs = []
+    # avg_accs = []
     avg_times = []
     for i, method in enumerate(LOGS_TO_USE):
-        avg_accs.append(avg_accs_train[i])
+        # avg_accs.append(avg_accs_train[i])
         avg_times.append(np.mean(results[method]["AvgTimeIter/train_phase/train_stream"]))
 
     width = 0.3
-    plt.xticks(range(len(avg_accs)), [get_label(log) for log in LOGS_TO_USE], rotation=45)
+    plt.xticks(range(len(avg_accs_train)), [get_label(log) for log in LOGS_TO_USE], rotation=45)
     plt.title(f"Avg train accuracy and run time")
-    ax.bar(np.array(range(len(avg_accs))) - (width / 2), avg_accs, color='blue', width=width)
+    ax.bar(np.array(range(len(avg_accs_train))) - (width / 2), avg_accs_train, color='blue', width=width)
     ax2 = ax.twinx()
-    ax2.bar(np.array(range(len(avg_accs))) + (width / 2), avg_times, color='red', width=width)
+    ax2.bar(np.array(range(len(avg_accs_train))) + (width / 2), avg_times, color='red', width=width)
     ax2.set_ylabel('Avg run time', color='red')
     plt.xlabel("After task")
     ax.set_ylabel("Accuracy [%]", color='blue')
@@ -210,6 +229,7 @@ def plot_acc_val(results, domains, args):
         for method in LOGS_TO_USE:
             accs = np.array(results[method][seq]) * 100.0
             ax.plot(range(len(accs)), accs, marker='.', label=get_label(method), color=get_plot_color(method))
+            print(f"TEST {method}: {accs[0]}")
 
         plt.xticks(range(len(domains) + 1), ['Init', *range(len(domains))])
         plt.grid(axis='both')
@@ -425,14 +445,25 @@ def plot_plot_per_timeofday_acc(results, domains, args):
     print("\nTime of day results")
     for method in LOGS_TO_USE:
         sum_day, sum_night, sum_dawndusk, num_day, num_night, num_dawndusk = 0, 0, 0, 0, 0, 0
-        for domain, accs in zip(domains, results[method]["Top1_Acc_MB/train_phase/train_stream"]):
-            # day for SHIFT, T1 and T3 are day sequences of CLAD
-            if 'day' in domain or 'T1' in domain or 'T3' in domain:
+        for i, (domain, accs) in enumerate(zip(domains, results[method]["Top1_Acc_MB/train_phase/train_stream"])):
+            
+            if NOT_INCLUDE_LAST_DOMAIN_IN_AVERAGE and i == len(domains) - 1:
+                break
+
+            if OLD_CLAD_DOMAIN_NAMES:
+                clad_day_domains = ['T1', 'T3']
+                clad_night_domains = ['T0', 'T2', 'T4']
+            else:
+                clad_day_domains = ['T2', 'T4']
+                clad_night_domains = ['T1', 'T3', 'T5']
+            
+            # day for SHIFT, T1 and T3 are day sequences of CLAD (old numbering)
+            if 'day' in domain or any([day_domain in domain for day_domain in clad_day_domains]):
                 sum_day = np.sum(accs)
                 num_day = len(accs)
-                
-            # night for SHIFT, T0, T2, T4 are day sequences of CLAD
-            elif 'night' in domain or 'T0' in domain or 'T2' in domain or 'T4' in domain:
+
+            # night for SHIFT, T0, T2, T4 are day sequences of CLAD (old numbering)
+            elif 'night' in domain or any([night_domain in domain for night_domain in clad_night_domains]):
                 sum_night = np.sum(accs)
                 num_night = len(accs)
             
@@ -536,8 +567,8 @@ def main(args):
     if args.save_results:
         copy_config_files()
 
-    domains = get_and_check_domains()
-    results = load_results(domains)
+    domains, accepted_domains_idxs = get_and_check_domains()
+    results = load_results(accepted_domains_idxs)
     
     # =======================================================================================
     table = [["method", *domains, "Avg"], *[[] for i in range(len(LOGS_TO_USE))]]
@@ -546,15 +577,22 @@ def main(args):
     for i, method in enumerate(LOGS_TO_USE):
         table[i + 1].append(method)
         flattened_results = []
-        for single_domain in results[method]["Top1_Acc_MB/train_phase/train_stream"]:
+        for j, single_domain in enumerate(results[method]["Top1_Acc_MB/train_phase/train_stream"]):
             single_domain_avg_acc = np.mean(single_domain) * 100.0
             per_domain_avg_accs_train[method].append(single_domain_avg_acc)
             table[i + 1].append(single_domain_avg_acc)
-            flattened_results.extend(single_domain)
+
+            if not (NOT_INCLUDE_LAST_DOMAIN_IN_AVERAGE and j == len(results[method]["Top1_Acc_MB/train_phase/train_stream"]) - 1):
+                flattened_results.extend(single_domain)
 
         avg_acc_train = np.mean(flattened_results) * 100.0
 
-        print(f'- {method}: \tAcc: {avg_acc_train:.2f}, \tClassification error: {100 - avg_acc_train:.2f}')
+        # whether to print source domain result as the last domain
+        if domains[-1] in ['clear', 'daytime_clear', 'T0']:
+            print(f'- {method}: \tAcc: {avg_acc_train:.2f}, \tClassification error: {100 - avg_acc_train:.2f}, \tSource acc: {single_domain_avg_acc:.2f}')
+        else:
+            print(f'- {method}: \tAcc: {avg_acc_train:.2f}, \tClassification error: {100 - avg_acc_train:.2f}')
+
         table[i + 1].append(avg_acc_train)
         
         avg_accs_train.append(avg_acc_train)
