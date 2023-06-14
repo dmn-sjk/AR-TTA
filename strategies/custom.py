@@ -120,8 +120,8 @@ class Custom(nn.Module):
         entropies = softmax_entropy(pseudo_labels, pseudo_labels, softmax_targets=True)
         max_entropies_fraction = entropies / self.max_entropy_value
         use_sample_probs = 1 - max_entropies_fraction
-        use_sample_probs[use_sample_probs < 0.1] = 0
-        use_sample_probs[use_sample_probs > 0.8] = 1
+        # use_sample_probs[use_sample_probs < 0.1] = 0
+        # use_sample_probs[use_sample_probs > 0.8] = 1
         chosen_samples_mask = torch.rand((x.shape[0],)) < use_sample_probs.cpu()
 
         num_of_chosen_samples = chosen_samples_mask.int().sum().item()
