@@ -99,6 +99,8 @@ class ConfigParser:
                             help="Number of samples per class to save for memory replay")
         parser.add_argument('--replay_augs', type=str, default=argparse.SUPPRESS,
                             help='Augmentation strategy for replay')
+        parser.add_argument('--sampling_method', type=str, default=argparse.SUPPRESS,
+                            help='Method of choosing samples for update')
         parser.add_argument('--wandb', action='store_true',
                             help="Log with wandb")
         parser.add_argument('--save_results', action='store_true',

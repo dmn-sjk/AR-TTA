@@ -71,6 +71,7 @@ class Custom(nn.Module):
         self.num_replay_samples = num_replay_samples
         self.max_entropy_value = np.log(cfg['num_classes'])
         self.num_samples_update = 0
+        self.current_model_probs = None
         assert steps > 0, "custom requires >= 1 step(s) to forward and update"
         
         self.model_state, self.optimizer_state, self.model_ema, self.model_source = \
@@ -106,7 +107,9 @@ class Custom(nn.Module):
         # Use this line to also restore the teacher model                         
         self.model_state, self.optimizer_state, self.model_ema, self.model_source = \
             copy_model_and_optimizer(self.model, self.optimizer)
-
+            
+    def reset_model_probs(self, probs):
+        self.current_model_probs = probs
 
     @torch.enable_grad()  # ensure grads in possible no grad context for testing
     def forward_and_adapt(self, x, model, optimizer):
@@ -116,22 +119,63 @@ class Custom(nn.Module):
         
         # pseudo_labels = source_outputs.detach().clone()
         pseudo_labels = ema_outputs.detach().clone()
-        
-        entropies = softmax_entropy(pseudo_labels, pseudo_labels, softmax_targets=True)
-        max_entropies_fraction = entropies / self.max_entropy_value
-        use_sample_probs = 1 - max_entropies_fraction
-        # use_sample_probs[use_sample_probs < 0.1] = 0
-        # use_sample_probs[use_sample_probs > 0.8] = 1
-        chosen_samples_mask = torch.rand((x.shape[0],)) < use_sample_probs.cpu()
 
-        num_of_chosen_samples = chosen_samples_mask.int().sum().item()
-        self.num_samples_update += num_of_chosen_samples
-        if num_of_chosen_samples == 0:
-            return self.model(x)
+        if self.cfg['sampling_method'] is not None:
+            if self.cfg['sampling_method'] in ['stochastic_entropy', 'stochastic_entropy_reverse']:
+                entropies = softmax_entropy(pseudo_labels, pseudo_labels, softmax_targets=True)
+                max_entropies_fraction = entropies / self.max_entropy_value
+            
+                if self.cfg['sampling_method'] == 'stochastic_entropy':
+                    use_sample_probs = 1 - max_entropies_fraction
+            
+                chosen_samples_mask = torch.rand((x.shape[0],)) < use_sample_probs.cpu()
+
+            elif self.cfg['sampling_method'] == 'random':
+                chosen_samples_mask = torch.rand((x.shape[0],)) < 0.5
+
+            elif self.cfg['sampling_method'] == 'eata':
+                e_margin = 0.4 * np.log(self.cfg['num_classes'])
+                d_margin = 0.4
+
+                outputs = self.model(x)
+                # adapt
+                entropys = softmax_entropy(outputs, outputs, softmax_targets=True)
         
-        x_for_model_update = x[chosen_samples_mask]
-        x_for_source = x_for_model_update
-        pseudo_labels = pseudo_labels[chosen_samples_mask]
+                chosen_samples_mask = torch.full((x.shape[0],), fill_value=False)
+                
+                # filter unreliable samples
+                filter_ids_1 = torch.where(entropys < e_margin)
+                chosen_samples_mask[filter_ids_1] = True
+                ids1 = filter_ids_1
+                entropys = entropys[filter_ids_1] 
+                # filter redundant samples
+                if self.current_model_probs is not None: 
+                    cosine_similarities = torch.nn.functional.cosine_similarity(self.current_model_probs.unsqueeze(dim=0), outputs[filter_ids_1].softmax(1), dim=1)
+                    filter_ids_2 = torch.where(torch.abs(cosine_similarities) < d_margin)
+                    entropys = entropys[filter_ids_2]
+
+                    temp_chosen_samples = torch.full((x.shape[0],), fill_value=False)
+                    temp_chosen_samples[filter_ids_2] = True
+
+                    chosen_samples_mask = torch.logical_and(chosen_samples_mask, temp_chosen_samples)
+                    
+                    updated_probs = update_model_probs(self.current_model_probs, outputs[filter_ids_1][filter_ids_2].softmax(1))
+                    self.reset_model_probs(updated_probs)
+                else:
+                    updated_probs = update_model_probs(self.current_model_probs, outputs[filter_ids_1].softmax(1))
+                    self.reset_model_probs(updated_probs)
+
+
+            num_of_chosen_samples = chosen_samples_mask.int().sum().item()
+            self.num_samples_update += num_of_chosen_samples
+            if num_of_chosen_samples == 0:
+                return self.model(x)
+            
+            x_for_model_update = x[chosen_samples_mask]
+            x_for_source = x_for_model_update
+            pseudo_labels = pseudo_labels[chosen_samples_mask]
+        else:
+            self.num_samples_update += x.shape[0]
         
         # inject samples from memory
         if self.memory is not None:
@@ -243,6 +287,21 @@ class Custom(nn.Module):
                             p.data = self.model_state[f"{nm}.{npp}"] * mask + p * (1.-mask)
 
         return self.model(x)
+
+def update_model_probs(current_model_probs, new_probs):
+    if current_model_probs is None:
+        if new_probs.size(0) == 0:
+            return None
+        else:
+            with torch.no_grad():
+                return new_probs.mean(0)
+    else:
+        if new_probs.size(0) == 0:
+            with torch.no_grad():
+                return current_model_probs
+        else:
+            with torch.no_grad():
+                return 0.9 * current_model_probs + (1 - 0.9) * new_probs.mean(0)
 
 
 @torch.jit.script
