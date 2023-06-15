@@ -123,10 +123,10 @@ class Custom(nn.Module):
         if self.cfg['sampling_method'] is not None:
             if self.cfg['sampling_method'] in ['stochastic_entropy', 'stochastic_entropy_reverse']:
                 entropies = softmax_entropy(pseudo_labels, pseudo_labels, softmax_targets=True)
-                max_entropies_fraction = entropies / self.max_entropy_value
-            
+                use_sample_probs = entropies / self.max_entropy_value
+
                 if self.cfg['sampling_method'] == 'stochastic_entropy':
-                    use_sample_probs = 1 - max_entropies_fraction
+                    use_sample_probs = 1 - use_sample_probs
             
                 chosen_samples_mask = torch.rand((x.shape[0],)) < use_sample_probs.cpu()
 
