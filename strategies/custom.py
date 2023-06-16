@@ -176,6 +176,7 @@ class Custom(nn.Module):
             pseudo_labels = pseudo_labels[chosen_samples_mask]
         else:
             self.num_samples_update += x.shape[0]
+            x_for_model_update, x_for_source = x, x
         
         # inject samples from memory
         if self.memory is not None:
