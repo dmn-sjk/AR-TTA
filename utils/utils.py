@@ -49,3 +49,12 @@ def get_experiment_folder(cfg: dict) -> str:
 
 def get_git_revision_hash() -> str:
     return subprocess.check_output(['git', 'rev-parse', 'HEAD']).decode('ascii').strip()
+
+
+def split_up_model(model, model_name):
+    if 'wideresnet' in model_name: 
+        encoder = nn.Sequential(*list(model.children())[:-1], nn.AvgPool2d(kernel_size=8, stride=8), nn.Flatten())
+    elif 'resnet' in model_name:
+        encoder = nn.Sequential(*list(model.children())[:-1], nn.Flatten())
+    classifier = model.fc
+    return encoder, classifier

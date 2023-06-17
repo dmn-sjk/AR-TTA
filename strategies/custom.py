@@ -13,6 +13,7 @@ import numpy as np
 
 import utils.cotta_transforms as my_transforms
 from utils.intermediate_features import IntermediateFeaturesGetter
+from utils.utils import split_up_model
 
 
 def get_tta_transforms(gaussian_std: float=0.005, soft=False, clip_inputs=False, img_size: int=64):
@@ -68,19 +69,15 @@ class Custom(nn.Module):
         self.features_distillation_weight = features_distillation_weight
         self.memory = memory
         self.cfg = cfg
-        self.num_replay_samples = num_replay_samples
+        self.num_replay_samples = self.cfg['batch_size']
         assert steps > 0, "custom requires >= 1 step(s) to forward and update"
         
         self.model_state, self.optimizer_state, self.model_ema, self.model_source = \
             copy_model_and_optimizer(self.model, self.optimizer)
             
-        if self.features_distillation_weight != 0:
-            self.model = IntermediateFeaturesGetter(self.model)
-            self.model_source = IntermediateFeaturesGetter(self.model_source)
-            # name of penultimate layer
-            self.features_layer = list(model.named_children())[-2][0]
-            self.model.register_features(self.features_layer)
-            self.model_source.register_features(self.features_layer)
+        self.encoder, self.classifier = split_up_model(self.model, self.cfg['model'])
+        self.encoder_ema, self.classifier_ema = split_up_model(self.model_ema, self.cfg['model'])
+        self.encoder_source, self.classifier_source = split_up_model(self.model_source, self.cfg['model'])
             
         self.transform = get_tta_transforms(img_size=img_size)
         
@@ -141,18 +138,23 @@ class Custom(nn.Module):
             else:
                 raise ValueError(f"Unknown replay augs strategy name: {self.cfg['replay_augs']}")
 
-                
-        outputs_update = self.model(x_for_model_update)
+        
+        features = self.encoder(x_for_model_update)
+        outputs_update = self.classifier(features)
+        # outputs_update = self.model(x_for_model_update)
+
+        ema_features = self.encoder_ema(x_for_source)
+        ema_outputs = self.classifier_ema(ema_features)
+        # ema_outputs = self.model_ema(x_for_source)
         # source_outputs = self.model_source(x_for_source)
-        ema_outputs = self.model_ema(x_for_source)
+
+        source_features = self.encoder_source(x_for_source)
+        source_outputs = self.classifier_source(source_features)
         
         # pseudo_labels = source_outputs.detach().clone()
         pseudo_labels = ema_outputs.detach().clone()
         # whether to apply softmax on targets while calculating cross entropy
         softmax_targets = True
-
-        if self.features_distillation_weight != 0:
-            source_features = self.model_source.get_features(self.features_layer)
 
         if self.memory is not None:
             # make accurate pseudo-labels for injected replay samples, since we have the labels
@@ -197,10 +199,7 @@ class Custom(nn.Module):
         #     outputs_ema = standard_ema
 
         loss = softmax_entropy(outputs_update / self.distillation_out_temp, pseudo_labels / self.distillation_out_temp, softmax_targets).mean(0)
-
-        if self.features_distillation_weight != 0:
-            loss += self.features_distillation_weight * nn.functional.mse_loss(torch.flatten(self.model.get_features(self.features_layer)),
-                                                                               torch.flatten(source_features))
+        loss += self.features_distillation_weight * nn.functional.mse_loss(features, source_features)
 
         loss.backward()
         optimizer.step()
