@@ -131,7 +131,7 @@ class Custom(nn.Module):
                 chosen_samples_mask = torch.rand((x.shape[0],)) < use_sample_probs.cpu()
 
             elif self.cfg['sampling_method'] == 'random':
-                chosen_samples_mask = torch.rand((x.shape[0],)) < 0.5
+                chosen_samples_mask = torch.rand((x.shape[0],)) < 0.1
 
             elif self.cfg['sampling_method'] == 'eata':
                 e_margin = 0.4 * np.log(self.cfg['num_classes'])
