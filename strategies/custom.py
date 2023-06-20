@@ -121,14 +121,19 @@ class Custom(nn.Module):
         pseudo_labels = ema_outputs.detach().clone()
 
         if self.cfg['sampling_method'] is not None:
-            if self.cfg['sampling_method'] in ['stochastic_entropy', 'stochastic_entropy_reverse']:
+            if self.cfg['sampling_method'] in ['stochastic_entropy', 
+                                               'stochastic_entropy_reverse', 
+                                               'stochastic_entropy_weight']:
                 entropies = softmax_entropy(pseudo_labels, pseudo_labels, softmax_targets=True)
                 use_sample_probs = entropies / self.max_entropy_value
 
                 if self.cfg['sampling_method'] == 'stochastic_entropy':
                     use_sample_probs = 1 - use_sample_probs
-            
+                    
                 chosen_samples_mask = torch.rand((x.shape[0],)) < use_sample_probs.cpu()
+                
+                if self.cfg['sampling_method'] == 'stochastic_entropy_weight':
+                    coeff = torch.exp(use_sample_probs[chosen_samples_mask].clone().detach())
 
             elif self.cfg['sampling_method'] == 'random':
                 chosen_samples_mask = torch.rand((x.shape[0],)) < 0.1
@@ -267,7 +272,7 @@ class Custom(nn.Module):
 
         entropies = softmax_entropy(outputs_update / self.distillation_out_temp, pseudo_labels / self.distillation_out_temp, softmax_targets)
 
-        if self.cfg['sampling_method'] == 'eata':
+        if self.cfg['sampling_method'] == 'eata' or self.cfg['sampling_method'] == 'stochastic_entropy_weight':
             entropies = entropies.mul(coeff) # reweight entropy losses for diff. samples
     
         loss = entropies.mean(0)

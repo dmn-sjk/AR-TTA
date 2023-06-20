@@ -26,4 +26,4 @@ choose_params_with_fisher: false
 mt: 0.999
 
 ## sample choosing for update
-sampling_method: null # null | stochastic_entropy | random | eata | stochastic_entropy_reverse
+sampling_method: null # null | stochastic_entropy | random | eata | stochastic_entropy_reverse | stochastic_entropy_weight
