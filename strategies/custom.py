@@ -164,7 +164,8 @@ class Custom(nn.Module):
                 else:
                     updated_probs = update_model_probs(self.current_model_probs, outputs[filter_ids_1].softmax(1))
                     self.reset_model_probs(updated_probs)
-
+                
+                coeff = 1 / (torch.exp(entropys.clone().detach() - e_margin))
 
             num_of_chosen_samples = chosen_samples_mask.int().sum().item()
             self.num_samples_update += num_of_chosen_samples
@@ -264,7 +265,12 @@ class Custom(nn.Module):
         # else:
         #     outputs_ema = standard_ema
 
-        loss = softmax_entropy(outputs_update / self.distillation_out_temp, pseudo_labels / self.distillation_out_temp, softmax_targets).mean(0)
+        entropies = softmax_entropy(outputs_update / self.distillation_out_temp, pseudo_labels / self.distillation_out_temp, softmax_targets)
+
+        if self.cfg['sampling_method'] == 'eata':
+            entropies = entropies.mul(coeff) # reweight entropy losses for diff. samples
+    
+        loss = entropies.mean(0)
 
         if self.features_distillation_weight != 0:
             loss += self.features_distillation_weight * nn.functional.mse_loss(torch.flatten(self.model.get_features(self.features_layer)),
