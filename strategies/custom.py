@@ -68,7 +68,7 @@ class Custom(nn.Module):
         self.features_distillation_weight = features_distillation_weight
         self.memory = memory
         self.cfg = cfg
-        self.num_replay_samples = num_replay_samples
+        self.num_replay_samples = self.cfg['batch_size']
         self.max_entropy_value = np.log(cfg['num_classes'])
         self.num_samples_update = 0
         self.current_model_probs = None
@@ -170,7 +170,7 @@ class Custom(nn.Module):
                     updated_probs = update_model_probs(self.current_model_probs, outputs[filter_ids_1].softmax(1))
                     self.reset_model_probs(updated_probs)
                 
-                coeff = 1 / (torch.exp(entropys.clone().detach() - e_margin))
+                coeff = 1 / torch.exp(entropys.clone().detach() - e_margin)
 
             num_of_chosen_samples = chosen_samples_mask.int().sum().item()
             self.num_samples_update += num_of_chosen_samples
