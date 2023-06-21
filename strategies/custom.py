@@ -131,14 +131,14 @@ class Custom(nn.Module):
                     use_sample_probs = 1 - use_sample_probs
                     
                 chosen_samples_mask = torch.rand((x.shape[0],)) < use_sample_probs.cpu()
-                
+
                 if self.cfg['sampling_method'] == 'stochastic_entropy_weight':
                     coeff = torch.exp(use_sample_probs[chosen_samples_mask].clone().detach())
 
             elif self.cfg['sampling_method'] == 'random':
                 chosen_samples_mask = torch.rand((x.shape[0],)) < 0.1
 
-            elif self.cfg['sampling_method'] == 'eata':
+            elif 'eata' in self.cfg['sampling_method']:
                 e_margin = 0.4 * np.log(self.cfg['num_classes'])
                 d_margin = 0.4
 
@@ -155,12 +155,12 @@ class Custom(nn.Module):
                 entropys = entropys[filter_ids_1] 
                 # filter redundant samples
                 if self.current_model_probs is not None: 
-                    cosine_similarities = torch.nn.functional.cosine_similarity(self.current_model_probs.unsqueeze(dim=0), outputs[filter_ids_1].softmax(1), dim=1)
-                    filter_ids_2 = torch.where(torch.abs(cosine_similarities) < d_margin)
+                    cosine_similarities = torch.nn.functional.cosine_similarity(self.current_model_probs.unsqueeze(dim=0), outputs.softmax(1), dim=1)
+                    filter_ids_2 = torch.where(torch.abs(cosine_similarities[filter_ids_1]) < d_margin)
                     entropys = entropys[filter_ids_2]
 
                     temp_chosen_samples = torch.full((x.shape[0],), fill_value=False)
-                    temp_chosen_samples[filter_ids_2] = True
+                    temp_chosen_samples[torch.where(torch.abs(cosine_similarities) < d_margin)] = True
 
                     chosen_samples_mask = torch.logical_and(chosen_samples_mask, temp_chosen_samples)
                     
@@ -169,8 +169,9 @@ class Custom(nn.Module):
                 else:
                     updated_probs = update_model_probs(self.current_model_probs, outputs[filter_ids_1].softmax(1))
                     self.reset_model_probs(updated_probs)
-                
-                coeff = 1 / torch.exp(entropys.clone().detach() - e_margin)
+
+                if self.cfg['sampling_method'] == 'eata_weight':
+                    coeff = 1 / torch.exp(entropys.clone().detach() - e_margin)
 
             num_of_chosen_samples = chosen_samples_mask.int().sum().item()
             self.num_samples_update += num_of_chosen_samples
@@ -272,7 +273,7 @@ class Custom(nn.Module):
 
         entropies = softmax_entropy(outputs_update / self.distillation_out_temp, pseudo_labels / self.distillation_out_temp, softmax_targets)
 
-        if self.cfg['sampling_method'] == 'eata' or self.cfg['sampling_method'] == 'stochastic_entropy_weight':
+        if self.cfg['sampling_method'] == 'eata_weight' or self.cfg['sampling_method'] == 'stochastic_entropy_weight':
             entropies = entropies.mul(coeff) # reweight entropy losses for diff. samples
     
         loss = entropies.mean(0)
