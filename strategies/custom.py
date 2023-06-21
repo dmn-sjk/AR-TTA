@@ -148,7 +148,7 @@ class Custom(nn.Module):
         # ema_outputs = self.model_ema(x_for_source)
         # source_outputs = self.model_source(x_for_source)
 
-        source_features = self.encoder_source(x_for_source)
+        source_features = self.encoder_source(x_for_model_update)
         source_outputs = self.classifier_source(source_features)
         
         # pseudo_labels = source_outputs.detach().clone()
