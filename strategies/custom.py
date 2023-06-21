@@ -120,7 +120,7 @@ class Custom(nn.Module):
         # pseudo_labels = source_outputs.detach().clone()
         pseudo_labels = ema_outputs.detach().clone()
 
-        if self.cfg['sampling_method'] is not None:
+        if self.cfg['sampling_method'] is not None and self.cfg['sampling_method'] not in ['none', 'None', 'null']:
             if self.cfg['sampling_method'] in ['stochastic_entropy', 
                                                'stochastic_entropy_reverse', 
                                                'stochastic_entropy_weight']:
@@ -299,7 +299,7 @@ class Custom(nn.Module):
                         with torch.no_grad():
                             p.data = self.model_state[f"{nm}.{npp}"] * mask + p * (1.-mask)
 
-        return self.model(x)
+        return ema_outputs
 
 def update_model_probs(current_model_probs, new_probs):
     if current_model_probs is None:

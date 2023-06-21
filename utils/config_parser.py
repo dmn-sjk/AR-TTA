@@ -91,6 +91,8 @@ class ConfigParser:
                             help="Size of images to use")
         parser.add_argument('--scheduler_gamma', type=float, default=argparse.SUPPRESS,
                             help="Gamma value for exponential lr scheduler")
+        parser.add_argument('--lr', type=float, default=argparse.SUPPRESS,
+                            help="Learning rate")
         parser.add_argument('--distillation_out_temp', type=int, default=argparse.SUPPRESS,
                             help="Temperature of distillation on output level")
         parser.add_argument('--features_distillation_weight', type=float, default=argparse.SUPPRESS,

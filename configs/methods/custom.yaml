@@ -3,7 +3,7 @@ optimizer: sgd
 beta: 0.9
 weight_decay: 0.
 steps: 1
-nesterov: true
+nesterov: false
 
 # -- my modifications --:
 
