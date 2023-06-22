@@ -361,11 +361,11 @@ def configure_model(model, params_for_update: list = None, num_first_blocks_for_
         else:
             module.requires_grad_(True)
 
-        if isinstance(module, nn.BatchNorm2d):
+        # if isinstance(module, nn.BatchNorm2d):
             # force use of batch stats in train and eval modes
-            module.track_running_stats = False
-            module.running_mean = None
-            module.running_var = None
+            # module.track_running_stats = False
+            # module.running_mean = None
+            # module.running_var = None
 
     return model
 

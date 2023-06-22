@@ -16,6 +16,7 @@ from benchmarks.shift import SHIFTClassificationDataset
 from shift_dev.types import WeathersCoarse, TimesOfDayCoarse
 from shift_dev.utils.backend import ZipBackend
 import clad
+from utils.batch_norm import replace_bn, count_bn, MectaNorm2d
 
 
 
@@ -94,6 +95,32 @@ def get_custom_strategy(cfg, model: torch.nn.Module, eval_plugin: EvaluationPlug
             if fisher_val_is_smaller_than_median:
                 params_for_update.append(param_name)
 
+
+    # MECTA BN:
+    n_repalced = replace_bn(model, cfg['model'],
+                   use_forget_gate=True,
+                   init_beta=None, beta=0.1,
+                   dist_metric='skl',
+                   bn_dist_scale=1,
+                   beta_thre=0.00125,
+                   prune_q=0.7,
+                   )
+    n_bn = count_bn(model)
+    assert n_repalced == n_bn, f"Replaced {n_repalced} BNs but actually have {n_bn}. Need to update `replace_bn`."
+
+    m_cnt = 0
+    for m in model.modules():
+        if isinstance(m, MectaNorm2d):
+            # m.update_accum_params(accum_mode='exp', use_forget_gate=args.forget_gate,
+            #                       init_beta=args.init_beta, beta=args.beta,
+            #                       verbose=m_cnt < 2, dist_metric=args.bn_dist_metric,
+            #                       bn_dist_scale=args.bn_dist_scale,
+            #                       # var_debias=args.var_debias
+            #                       )
+            m.reset()
+            m_cnt += 1
+    assert n_repalced == m_cnt, f"Replaced {n_repalced} BNs but actually inserted {m_cnt} AccumBN."
+    ##
 
     model = custom.configure_model(model, 
                                    params_for_update=params_for_update, 

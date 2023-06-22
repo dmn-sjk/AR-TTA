@@ -6,6 +6,24 @@ import os
 import subprocess
 
 
+# ref: https://github.com/Oldpan/Pytorch-Memory-Utils/blob/master/gpu_mem_track.py
+dtype_memory_size_dict = {
+    torch.float64: 64/8,
+    torch.double: 64/8,
+    torch.float32: 32/8,
+    torch.float: 32/8,
+    torch.float16: 16/8,
+    torch.half: 16/8,
+    torch.int64: 64/8,
+    torch.long: 64/8,
+    torch.int32: 32/8,
+    torch.int: 32/8,
+    torch.int16: 16/8,
+    torch.short: 16/6,
+    torch.uint8: 8/8,
+    torch.int8: 8/8,
+}
+
 def norm_params_unchanged(strategy, prev_norm_params):
         for m in strategy.model.modules():
             if isinstance(m, nn.BatchNorm2d):
