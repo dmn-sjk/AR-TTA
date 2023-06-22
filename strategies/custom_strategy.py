@@ -107,7 +107,7 @@ def get_custom_strategy(cfg, model: torch.nn.Module, eval_plugin: EvaluationPlug
     #                )
     n_repalced = replace_bn(model, cfg['model'],
                    use_forget_gate=True,
-                   init_beta=None, beta=0.1,
+                   init_beta=None, beta=cfg['mecta_beta'],
                    dist_metric='skl',
                    bn_dist_scale=1,
                    beta_thre=0,
