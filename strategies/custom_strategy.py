@@ -97,13 +97,21 @@ def get_custom_strategy(cfg, model: torch.nn.Module, eval_plugin: EvaluationPlug
 
 
     # MECTA BN:
+    # n_repalced = replace_bn(model, cfg['model'],
+    #                use_forget_gate=True,
+    #                init_beta=None, beta=0.1,
+    #                dist_metric='skl',
+    #                bn_dist_scale=1,
+    #                beta_thre=0.00125,
+    #                prune_q=0.7
+    #                )
     n_repalced = replace_bn(model, cfg['model'],
                    use_forget_gate=True,
                    init_beta=None, beta=0.1,
                    dist_metric='skl',
                    bn_dist_scale=1,
-                   beta_thre=0.00125,
-                   prune_q=0.7,
+                   beta_thre=0,
+                   prune_q=0
                    )
     n_bn = count_bn(model)
     assert n_repalced == n_bn, f"Replaced {n_repalced} BNs but actually have {n_bn}. Need to update `replace_bn`."
