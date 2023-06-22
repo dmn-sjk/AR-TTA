@@ -198,7 +198,7 @@ class Custom(nn.Module):
         # else:
         #     outputs_ema = standard_ema
 
-        loss = softmax_entropy(outputs_update / self.distillation_out_temp, pseudo_labels / self.distillation_out_temp, softmax_targets).mean(0)
+        loss = (1 - self.features_distillation_weight) * softmax_entropy(outputs_update / self.distillation_out_temp, pseudo_labels / self.distillation_out_temp, softmax_targets).mean(0)
         loss += self.features_distillation_weight * nn.functional.mse_loss(features, source_features)
 
         loss.backward()
