@@ -111,8 +111,7 @@ class Custom(nn.Module):
     @torch.enable_grad()  # ensure grads in possible no grad context for testing
     def forward_and_adapt(self, x, model, optimizer):
         
-        # source_outputs = self.model_source(x_for_source)
-        ema_outputs = self.model_ema(x)
+        ema_outputs = self.classifier_ema(self.encoder_ema(x))
         
         # pseudo_labels = source_outputs.detach().clone()
         pseudo_labels = ema_outputs.detach().clone()
@@ -185,7 +184,7 @@ class Custom(nn.Module):
         # inject samples from memory
         if self.memory is not None:
             random_order_idxs = torch.randint(high=len(self.memory['labels']),
-                                              size=(self.num_replay_samples,))
+                                              size=(x_for_model_update.shape[0],))
             
             replay_x = self.memory['x'][random_order_idxs].to(self.cfg['device'])
             if self.cfg['replay_augs'] == 'mixup_from_memory':
@@ -214,21 +213,10 @@ class Custom(nn.Module):
         
         features = self.encoder(x_for_model_update)
         outputs_update = self.classifier(features)
-        # outputs_update = self.model(x_for_model_update)
 
-        ema_features = self.encoder_ema(x_for_source)
-        ema_outputs = self.classifier_ema(ema_features)
-        # ema_outputs = self.model_ema(x_for_source)
-        # source_outputs = self.model_source(x_for_source)
 
         source_features = self.encoder_source(x_for_model_update)
-        source_outputs = self.classifier_source(source_features)
         
-        # # source_outputs = self.model_source(x_for_source)
-        # ema_outputs = self.model_ema(x_for_source)
-        
-        # # pseudo_labels = source_outputs.detach().clone()
-        # pseudo_labels = ema_outputs.detach().clone()
         
         # whether to apply softmax on targets while calculating cross entropy
         softmax_targets = True
@@ -260,20 +248,7 @@ class Custom(nn.Module):
             else:
                 raise ValueError(f"Unknown replay augs strategy name: {self.cfg['replay_augs']}")
 
-        
-        # anchor_prob = torch.nn.functional.softmax(self.model_source(x), dim=1).max(1)[0]
-        # # Threshold choice discussed in supplementary
-        # if anchor_prob.mean(0)<self.ap:
-    # Augmentation-averaged Prediction
-        # N = 32
-        # outputs_emas = []
-        # for i in range(N):
-        #     outputs_  = self.model_source(self.transform(x)).detach()
-        #     outputs_emas.append(outputs_)
 
-        # augs_outputs = torch.stack(outputs_emas).mean(0)
-        # else:
-        #     outputs_ema = standard_ema
 
         entropies = softmax_entropy(outputs_update / self.distillation_out_temp, pseudo_labels / self.distillation_out_temp, softmax_targets)
         
