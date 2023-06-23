@@ -91,6 +91,8 @@ class ConfigParser:
                             help="Size of images to use")
         parser.add_argument('--scheduler_gamma', type=float, default=argparse.SUPPRESS,
                             help="Gamma value for exponential lr scheduler")
+        parser.add_argument('--lr', type=float, default=argparse.SUPPRESS,
+                            help="Learning rate")
         parser.add_argument('--distillation_out_temp', type=int, default=argparse.SUPPRESS,
                             help="Temperature of distillation on output level")
         parser.add_argument('--features_distillation_weight', type=float, default=argparse.SUPPRESS,
@@ -99,6 +101,8 @@ class ConfigParser:
                             help="Number of samples per class to save for memory replay")
         parser.add_argument('--replay_augs', type=str, default=argparse.SUPPRESS,
                             help='Augmentation strategy for replay')
+        parser.add_argument('--sampling_method', type=str, default=argparse.SUPPRESS,
+                            help='Method of choosing samples for update')
         parser.add_argument('--wandb', action='store_true',
                             help="Log with wandb")
         parser.add_argument('--save_results', action='store_true',

@@ -70,6 +70,9 @@ class Custom(nn.Module):
         self.memory = memory
         self.cfg = cfg
         self.num_replay_samples = self.cfg['batch_size']
+        self.max_entropy_value = np.log(cfg['num_classes'])
+        self.num_samples_update = 0
+        self.current_model_probs = None
         assert steps > 0, "custom requires >= 1 step(s) to forward and update"
         
         self.model_state, self.optimizer_state, self.model_ema, self.model_source = \
@@ -101,13 +104,83 @@ class Custom(nn.Module):
         # Use this line to also restore the teacher model                         
         self.model_state, self.optimizer_state, self.model_ema, self.model_source = \
             copy_model_and_optimizer(self.model, self.optimizer)
-
+            
+    def reset_model_probs(self, probs):
+        self.current_model_probs = probs
 
     @torch.enable_grad()  # ensure grads in possible no grad context for testing
     def forward_and_adapt(self, x, model, optimizer):
         
-        x_for_source, x_for_model_update = x, x
+        # source_outputs = self.model_source(x_for_source)
+        ema_outputs = self.model_ema(x)
         
+        # pseudo_labels = source_outputs.detach().clone()
+        pseudo_labels = ema_outputs.detach().clone()
+
+        if self.cfg['sampling_method'] is not None and self.cfg['sampling_method'] not in ['none', 'None', 'null']:
+            if self.cfg['sampling_method'] in ['stochastic_entropy', 
+                                               'stochastic_entropy_reverse', 
+                                               'stochastic_entropy_weight']:
+                entropies = softmax_entropy(pseudo_labels, pseudo_labels, softmax_targets=True)
+                use_sample_probs = entropies / self.max_entropy_value
+
+                if self.cfg['sampling_method'] == 'stochastic_entropy':
+                    use_sample_probs = 1 - use_sample_probs
+                    
+                chosen_samples_mask = torch.rand((x.shape[0],)) < use_sample_probs.cpu()
+
+                if self.cfg['sampling_method'] == 'stochastic_entropy_weight':
+                    coeff = torch.exp(use_sample_probs[chosen_samples_mask].clone().detach())
+
+            elif self.cfg['sampling_method'] == 'random':
+                chosen_samples_mask = torch.rand((x.shape[0],)) < 0.1
+
+            elif 'eata' in self.cfg['sampling_method']:
+                e_margin = 0.4 * np.log(self.cfg['num_classes'])
+                d_margin = 0.4
+
+                outputs = self.model(x)
+                # adapt
+                entropys = softmax_entropy(outputs, outputs, softmax_targets=True)
+        
+                chosen_samples_mask = torch.full((x.shape[0],), fill_value=False)
+                
+                # filter unreliable samples
+                filter_ids_1 = torch.where(entropys < e_margin)
+                chosen_samples_mask[filter_ids_1] = True
+                ids1 = filter_ids_1
+                entropys = entropys[filter_ids_1] 
+                # filter redundant samples
+                if self.current_model_probs is not None: 
+                    cosine_similarities = torch.nn.functional.cosine_similarity(self.current_model_probs.unsqueeze(dim=0), outputs.softmax(1), dim=1)
+                    filter_ids_2 = torch.where(torch.abs(cosine_similarities[filter_ids_1]) < d_margin)
+                    entropys = entropys[filter_ids_2]
+
+                    temp_chosen_samples = torch.full((x.shape[0],), fill_value=False)
+                    temp_chosen_samples[torch.where(torch.abs(cosine_similarities) < d_margin)] = True
+
+                    chosen_samples_mask = torch.logical_and(chosen_samples_mask, temp_chosen_samples)
+                    
+                    updated_probs = update_model_probs(self.current_model_probs, outputs[filter_ids_1][filter_ids_2].softmax(1))
+                    self.reset_model_probs(updated_probs)
+                else:
+                    updated_probs = update_model_probs(self.current_model_probs, outputs[filter_ids_1].softmax(1))
+                    self.reset_model_probs(updated_probs)
+
+                if self.cfg['sampling_method'] == 'eata_weight':
+                    coeff = 1 / torch.exp(entropys.clone().detach() - e_margin)
+
+            num_of_chosen_samples = chosen_samples_mask.int().sum().item()
+            self.num_samples_update += num_of_chosen_samples
+            if num_of_chosen_samples == 0:
+                return self.model(x)
+            
+            x_for_model_update = x[chosen_samples_mask]
+            x_for_source = x_for_model_update
+            pseudo_labels = pseudo_labels[chosen_samples_mask]
+        else:
+            self.num_samples_update += x.shape[0]
+            x_for_model_update, x_for_source = x, x
         
         # inject samples from memory
         if self.memory is not None:
@@ -118,7 +191,7 @@ class Custom(nn.Module):
             if self.cfg['replay_augs'] == 'mixup_from_memory':
                 alpha = 0.4
                 lam = np.random.beta(alpha, alpha)
-                mixupped_x = lam * x + (1 - lam) * replay_x[:x.shape[0]]
+                mixupped_x = lam * x_for_model_update + (1 - lam) * replay_x[:x_for_model_update.shape[0]]
                 
                 x_for_model_update = mixupped_x
             elif self.cfg['replay_augs'] == 'cotta':
@@ -151,8 +224,12 @@ class Custom(nn.Module):
         source_features = self.encoder_source(x_for_model_update)
         source_outputs = self.classifier_source(source_features)
         
-        # pseudo_labels = source_outputs.detach().clone()
-        pseudo_labels = ema_outputs.detach().clone()
+        # # source_outputs = self.model_source(x_for_source)
+        # ema_outputs = self.model_ema(x_for_source)
+        
+        # # pseudo_labels = source_outputs.detach().clone()
+        # pseudo_labels = ema_outputs.detach().clone()
+        
         # whether to apply softmax on targets while calculating cross entropy
         softmax_targets = True
 
@@ -198,7 +275,12 @@ class Custom(nn.Module):
         # else:
         #     outputs_ema = standard_ema
 
-        loss = (1 - self.features_distillation_weight) * softmax_entropy(outputs_update / self.distillation_out_temp, pseudo_labels / self.distillation_out_temp, softmax_targets).mean(0)
+        entropies = softmax_entropy(outputs_update / self.distillation_out_temp, pseudo_labels / self.distillation_out_temp, softmax_targets)
+        
+        if self.cfg['sampling_method'] == 'eata_weight' or self.cfg['sampling_method'] == 'stochastic_entropy_weight':
+            entropies = entropies.mul(coeff) # reweight entropy losses for diff. samples
+        
+        loss = (1 - self.features_distillation_weight) * entropies.mean(0)
         loss += self.features_distillation_weight * nn.functional.mse_loss(features, source_features)
 
         loss.backward()
@@ -218,7 +300,22 @@ class Custom(nn.Module):
                         with torch.no_grad():
                             p.data = self.model_state[f"{nm}.{npp}"] * mask + p * (1.-mask)
 
-        return self.model(x)
+        return ema_outputs
+
+def update_model_probs(current_model_probs, new_probs):
+    if current_model_probs is None:
+        if new_probs.size(0) == 0:
+            return None
+        else:
+            with torch.no_grad():
+                return new_probs.mean(0)
+    else:
+        if new_probs.size(0) == 0:
+            with torch.no_grad():
+                return current_model_probs
+        else:
+            with torch.no_grad():
+                return 0.9 * current_model_probs + (1 - 0.9) * new_probs.mean(0)
 
 
 @torch.jit.script

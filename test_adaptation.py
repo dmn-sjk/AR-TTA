@@ -42,6 +42,10 @@ def main():
         strategy.train(experience, eval_streams=[], shuffle=False,
                        num_workers=cfg['num_workers'])
 
+        print(f"Percentage of used samples: {(strategy.model.num_samples_update / len(experience.dataset)) * 100.0:.2f}")
+        
+        strategy.model.num_samples_update = 0
+
         strategy.eval(benchmark.test_stream[0], num_workers=cfg['num_workers'])
 
 
