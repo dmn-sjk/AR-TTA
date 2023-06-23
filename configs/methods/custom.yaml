@@ -23,8 +23,12 @@ num_first_blocks_for_update: -1
 fisher_size: 2000
 choose_params_with_fisher: false
 
-# ema teacher
+## ema teacher
 mt: 0.999
 
 ## sample choosing for update
 sampling_method: null # null | stochastic_entropy | random | eata | eata_weight | stochastic_entropy_reverse | stochastic_entropy_weight
+
+## mecta:
+bn_dist_scale: 1
+mecta_beta: 0.1
