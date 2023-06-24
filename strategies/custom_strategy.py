@@ -110,6 +110,7 @@ def get_custom_strategy(cfg, model: torch.nn.Module, eval_plugin: EvaluationPlug
                    init_beta=None, beta=cfg['mecta_beta'],
                    dist_metric='skl',
                    bn_dist_scale=cfg['bn_dist_scale'],
+                   smoothing_beta=cfg['smoothing_beta'],
                    beta_thre=0,
                    prune_q=0
                    )

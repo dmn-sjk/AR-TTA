@@ -98,6 +98,8 @@ class ConfigParser:
                             help="Beta for stats ema")
         parser.add_argument('--bn_dist_scale', type=float, default=argparse.SUPPRESS,
                             help="Scale for distributions distance in MectaBN")
+        parser.add_argument('--smoothing_beta', type=float, default=argparse.SUPPRESS,
+                            help="Coeff for ema beta")
         parser.add_argument('--distillation_out_temp', type=int, default=argparse.SUPPRESS,
                             help="Temperature of distillation on output level")
         parser.add_argument('--memory_size', type=int, default=argparse.SUPPRESS,

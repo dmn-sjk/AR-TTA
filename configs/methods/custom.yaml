@@ -32,3 +32,4 @@ sampling_method: null # null | stochastic_entropy | random | eata | eata_weight 
 ## mecta:
 bn_dist_scale: 1
 mecta_beta: 0.1
+smoothing_beta: 1

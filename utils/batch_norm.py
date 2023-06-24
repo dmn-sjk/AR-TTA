@@ -28,7 +28,7 @@ class MectaNorm2d(BatchNorm2d):
                  accum_mode='exp', beta=0.1, use_forget_gate=False,
                  init_beta=None,
                  verbose=False, dist_metric='skl', bn_dist_scale=1.,
-                 beta_thre=0., prune_q=0., name='bn',
+                 beta_thre=0., prune_q=0., name='bn', smoothing_beta=0.5,
                  ):
         super(MectaNorm2d, self).__init__(
             num_features, eps=eps, momentum=momentum, affine=affine,
@@ -52,6 +52,8 @@ class MectaNorm2d(BatchNorm2d):
         self.prune_q = prune_q
 
         self.forward_cache_size = None
+        
+        self.smoothing_beta = smoothing_beta
 
     def update_dist_metric(self, dist_metric):
         if dist_metric == 'kl':
@@ -110,8 +112,7 @@ class MectaNorm2d(BatchNorm2d):
                                             eps=1e-3)  # self.eps) Small eps can reduce the sensitivity to unstable small variance.
                     new_beta = 1. - torch.exp(- self.bn_dist_scale * dist.mean())
                     
-                    smoothing = 0.5
-                    beta = (1 - smoothing) * self.beta + smoothing * new_beta 
+                    beta = (1 - self.smoothing_beta) * self.beta + self.smoothing_beta * new_beta 
 
                     # update beta
                     self.beta = beta.item() # if hasattr(beta, 'item') else beta
