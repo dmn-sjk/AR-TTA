@@ -108,10 +108,14 @@ class MectaNorm2d(BatchNorm2d):
                     dist = self.dist_metric(batch_mean, batch_var,
                                             self.running_mean, self.running_var, 
                                             eps=1e-3)  # self.eps) Small eps can reduce the sensitivity to unstable small variance.
-                    beta = 1. - torch.exp(- self.bn_dist_scale * dist.mean())
+                    new_beta = 1. - torch.exp(- self.bn_dist_scale * dist.mean())
+                    
+                    smoothing = 0.5
+                    beta = (1 - smoothing) * self.beta + smoothing * new_beta 
 
                     # update beta
                     self.beta = beta.item() # if hasattr(beta, 'item') else beta
+                    
                 else:  # use constant beta
                     beta = self.beta if self.past_size > 0 else self.init_beta
 
