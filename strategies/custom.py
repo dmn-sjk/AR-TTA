@@ -243,14 +243,15 @@ class Custom(nn.Module):
 
             elif self.cfg['replay_augs'] == 'mixup_from_memory':
                 pseudo_labels = lam * pseudo_labels.softmax(1) + (1 - lam) * replay_pseudo_labels[:pseudo_labels.shape[0]]
-                softmax_targets = False
+                pseudo_labels_before_softmax = torch.log(pseudo_labels)
+                softmax_targets = True
                 
             else:
                 raise ValueError(f"Unknown replay augs strategy name: {self.cfg['replay_augs']}")
 
 
 
-        entropies = softmax_entropy(outputs_update / self.distillation_out_temp, pseudo_labels / self.distillation_out_temp, softmax_targets)
+        entropies = softmax_entropy(outputs_update / self.distillation_out_temp, pseudo_labels_before_softmax / self.distillation_out_temp, softmax_targets)
         
         if self.cfg['sampling_method'] == 'eata_weight' or self.cfg['sampling_method'] == 'stochastic_entropy_weight':
             entropies = entropies.mul(coeff) # reweight entropy losses for diff. samples
