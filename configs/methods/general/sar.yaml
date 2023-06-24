@@ -3,3 +3,5 @@ optimizer: sgd
 beta: 0.9
 weight_decay: 0.
 nesterov: true
+
+e_margin_coeff: 0.4

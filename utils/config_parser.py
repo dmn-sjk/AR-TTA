@@ -43,7 +43,7 @@ class ConfigParser:
             cfg_files = [
                 os.path.join(self.CONFIGS_DIR, "general", self.GENERAL_CONFIG_FILE + ".yaml"),
                 os.path.join(self.CONFIGS_DIR, "general", self.GENERAL_CONFIG_FILE + "_" + self.mode + ".yaml"),
-                os.path.join(self.CONFIGS_DIR, "methods", args.method + ".yaml"),
+                os.path.join(self.CONFIGS_DIR, "methods", args.dataset, args.method + ".yaml"),
                 os.path.join(self.CONFIGS_DIR, "datasets", args.dataset + ".yaml")
             ]
         
