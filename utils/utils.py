@@ -4,6 +4,7 @@ import random
 import numpy as np
 import os
 import subprocess
+import yaml
 
 
 # ref: https://github.com/Oldpan/Pytorch-Memory-Utils/blob/master/gpu_mem_track.py
@@ -76,3 +77,7 @@ def split_up_model(model, model_name):
         encoder = nn.Sequential(*list(model.children())[:-1], nn.Flatten())
     classifier = model.fc
     return encoder, classifier
+
+def save_config(cfg, experiment_name):
+    with open(os.path.join(get_experiment_folder(cfg), experiment_name + '_config.yaml'), 'w') as f:
+        yaml.dump(cfg, f, default_flow_style=False)

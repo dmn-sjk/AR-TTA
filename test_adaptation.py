@@ -1,8 +1,6 @@
 import torch
-import os
-import yaml
 
-from utils.utils import set_seed, get_experiment_name, get_experiment_folder, get_git_revision_hash
+from utils.utils import set_seed, get_experiment_name, get_experiment_folder, get_git_revision_hash, save_config
 from utils.config_parser import ConfigParser
 from benchmarks import get_benchmark
 from strategies import get_strategy
@@ -39,17 +37,25 @@ def main():
 
         if cfg['save_results'] and not config_saved:
             cfg['git_commit'] = get_git_revision_hash()
-
-            # save config
-            with open(os.path.join(get_experiment_folder(cfg), experiment_name + '_config.yaml'), 'w') as f:
-                yaml.dump(cfg, f, default_flow_style=False)
+            save_config(cfg, experiment_name)
 
         if cfg['dataset'] == 'cifar10c':
             shuffle = True
-        else:
+            from benchmarks.cifar10c import domain_to_experience_idx
+            
+        elif cfg['dataset'] == 'clad':
             shuffle = False
+            from benchmarks.cladc import domain_to_experience_idx
 
-        for i, experience in enumerate(benchmark.train_stream):
+        elif cfg['dataset'] == 'shift':
+            shuffle = False
+            domain_to_experience_idx = None
+        else:
+            raise ValueError(f"Unknown dataset: {cfg['dataset']}")
+
+        for i, experience in enumerate(experience_generator(benchmark.train_stream, 
+                                                        domains=cfg['domains'],
+                                                        domains_to_exp_idx_func=domain_to_experience_idx)):
             # strategy.train(experience, eval_streams=[benchmark.streams['val']], shuffle=False,
             #                num_workers=cfg['num_workers)
 
@@ -65,8 +71,18 @@ def main():
             # strategy.model.num_samples_update = 0
 
             # strategy.eval(benchmark.test_stream[0], num_workers=cfg['num_workers'])
-
+            
     evaluate_results(cfg)
+        
+def experience_generator(train_stream, domains, domains_to_exp_idx_func):
+    if domains_to_exp_idx_func is not None:
+        for domain in domains:
+            idx = domains_to_exp_idx_func(domain)
+            yield train_stream[idx]
+
+    else:
+        for exp in train_stream:
+            yield exp
 
 if __name__ == '__main__':
     main()

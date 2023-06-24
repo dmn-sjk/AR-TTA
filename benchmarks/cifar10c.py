@@ -5,6 +5,7 @@ from avalanche.benchmarks.utils import (
 from avalanche.benchmarks.scenarios import GenericCLScenario
 from avalanche.benchmarks.scenarios.generic_benchmark_creation import create_multi_dataset_generic_benchmark
 from copy import copy
+import numpy as np
 
 from utils.transforms import get_transforms
 from constants.cifar import LONG_DOMAINS_SEQ, REPETITIVE_DOMAINS_SEQ, STANDARD_DOMAINS_SEQ
@@ -14,7 +15,7 @@ from datasets.cifar10c import CIFAR10CDataset
 def get_cifar10c_benchmark(cfg) -> GenericCLScenario:
     train_sets = []
     val_sets = []
-    if cfg['benchmark'] == "cifar10c_standard":
+    if cfg['benchmark'] in ["cifar10c_standard", "cifar10c_long_random"]:
         corruptions = copy(STANDARD_DOMAINS_SEQ)
     elif cfg['benchmark'] == "cifar10c_long":
         corruptions = copy(LONG_DOMAINS_SEQ)
@@ -23,7 +24,10 @@ def get_cifar10c_benchmark(cfg) -> GenericCLScenario:
     else:
         raise ValueError("Unknown type of cifar benchmark")
 
-    cfg['domains'] = corruptions
+    if cfg['benchmark'] == 'cifar10c_long_random':
+        cfg['domains'] = list(np.random.choice(corruptions, size=150))
+    else:
+        cfg['domains'] = corruptions
     
     transforms_test = get_transforms(cfg, train=False)
 
@@ -71,3 +75,9 @@ def get_cifar10c_benchmark(cfg) -> GenericCLScenario:
                                                   #   train_transform=transforms_train,
                                                   #   eval_transform=transforms_test
                                                   )
+
+def domain_to_experience_idx(domain):
+    if domain in STANDARD_DOMAINS_SEQ:
+        return STANDARD_DOMAINS_SEQ.index(domain)
+    elif domain == 'clear':
+        return len(STANDARD_DOMAINS_SEQ)

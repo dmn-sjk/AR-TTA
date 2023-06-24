@@ -1,6 +1,7 @@
 import clad
 from utils.transforms import get_transforms
 from avalanche.benchmarks.scenarios import GenericCLScenario
+import numpy as np
 
 
 def get_cladc_benchmark(cfg) -> GenericCLScenario:
@@ -14,6 +15,15 @@ def get_cladc_benchmark(cfg) -> GenericCLScenario:
     if cfg["end_with_source_domain"]:
         cfg['domains'][-1] = 'T0'
 
+    if cfg['benchmark'] == 'clad_long_random':
+        cfg['domains'] = list(np.random.choice(cfg['domains'][:-1], size=150))
+        cfg['domains'].append('T0')
+
     return benchmark
 
+def domain_to_experience_idx(domain):
+    task_nr = int(domain[-1])
+    if task_nr == 0:
+        return 5
+    return task_nr - 1
     
