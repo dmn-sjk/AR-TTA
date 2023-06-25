@@ -7,15 +7,16 @@ nesterov: false
 
 # -- my modifications --:
 
+update_method: emateacher # source_pseudolabels | emateacher
+
 ## distillation
 distillation_out_temp: 1 # of ditillation loss of output
 features_distillation_weight: 0 # distillation on feature level weight with respect to loss
 
 ## exemplars
-exemplars: true
 memory_per_class: 10
 num_replay_samples: 10
-replay_augs: mixup_from_memory # none | cotta | mixup_from_memory | mixup_within_memory
+replay_augs: mixup_from_memory # null | cotta | mixup_from_memory | mixup_within_memory
 
 num_first_blocks_for_update: -1
 

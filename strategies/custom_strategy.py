@@ -112,7 +112,7 @@ def get_custom_strategy(cfg, model: torch.nn.Module, eval_plugin: EvaluationPlug
         raise ValueError(f"Unknown optimizer: {cfg['optimizer']}")
 
     memory = None
-    if cfg['exemplars']:
+    if cfg['replay_augs'] is not None and cfg['replay_augs'] not in ['none', 'None', 'null']:
         if cfg['dataset'] == 'cifar10c':
             train_dataset = CIFAR10CDataset(cfg['data_root'], corruption=None, split='train', transforms=None)
         elif cfg['dataset'] == 'shift':

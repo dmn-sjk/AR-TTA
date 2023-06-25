@@ -103,6 +103,8 @@ class ConfigParser:
                             help='Augmentation strategy for replay')
         parser.add_argument('--sampling_method', type=str, default=argparse.SUPPRESS,
                             help='Method of choosing samples for update')
+        parser.add_argument('--update_method', type=str, default=argparse.SUPPRESS,
+                            help='source_pseudolabels | emateacher')
         parser.add_argument('--wandb', action='store_true',
                             help="Log with wandb")
         parser.add_argument('--save_results', action='store_true',

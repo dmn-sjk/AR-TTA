@@ -110,11 +110,16 @@ class Custom(nn.Module):
 
     @torch.enable_grad()  # ensure grads in possible no grad context for testing
     def forward_and_adapt(self, x, model, optimizer):
-        
-        ema_outputs = self.classifier_ema(self.encoder_ema(x))
-        
+
+        ema_outputs = self.model_ema(x)
+        student_outputs = self.model(x)
+        source_outputs = self.model_source(x)
+
         # pseudo_labels = source_outputs.detach().clone()
-        pseudo_labels = ema_outputs.detach().clone()
+        if self.cfg['update_method'] == 'emateacher':
+            pseudo_labels = ema_outputs.detach().clone()
+        else:
+            pseudo_labels = source_outputs.detach().clone()
 
         if self.cfg['sampling_method'] is not None and self.cfg['sampling_method'] not in ['none', 'None', 'null']:
             if self.cfg['sampling_method'] in ['stochastic_entropy', 
@@ -138,12 +143,12 @@ class Custom(nn.Module):
                 e_margin = 0.4 * np.log(self.cfg['num_classes'])
                 d_margin = 0.4
 
-                outputs = self.model(x)
+                outputs = student_outputs
                 # adapt
                 entropys = softmax_entropy(outputs, outputs, softmax_targets=True)
         
                 chosen_samples_mask = torch.full((x.shape[0],), fill_value=False)
-                
+    
                 # filter unreliable samples
                 filter_ids_1 = torch.where(entropys < e_margin)
                 chosen_samples_mask[filter_ids_1] = True
@@ -172,15 +177,14 @@ class Custom(nn.Module):
             num_of_chosen_samples = chosen_samples_mask.int().sum().item()
             self.num_samples_update += num_of_chosen_samples
             if num_of_chosen_samples == 0:
-                return self.model(x)
+                return student_outputs
             
             x_for_model_update = x[chosen_samples_mask]
-            x_for_source = x_for_model_update
             pseudo_labels = pseudo_labels[chosen_samples_mask]
         else:
             self.num_samples_update += x.shape[0]
-            x_for_model_update, x_for_source = x, x
-        
+            x_for_model_update = x
+
         # inject samples from memory
         if self.memory is not None:
             random_order_idxs = torch.randint(high=len(self.memory['labels']),
@@ -190,23 +194,21 @@ class Custom(nn.Module):
             if self.cfg['replay_augs'] == 'mixup_from_memory':
                 alpha = 0.4
                 lam = np.random.beta(alpha, alpha)
-                mixupped_x = lam * x_for_model_update + (1 - lam) * replay_x[:x_for_model_update.shape[0]]
-                
+                mixupped_x = lam * x_for_model_update + (1 - lam) * replay_x
+
                 x_for_model_update = mixupped_x
             elif self.cfg['replay_augs'] == 'cotta':
                 replay_x = self.transform(replay_x)
 
-                x_for_source = torch.cat((x_for_source, replay_x), dim=0)
-                x_for_model_update = x_for_source
-                
+                x_for_model_update = torch.cat((x_for_model_update, replay_x), dim=0)
+
             elif self.cfg['replay_augs'] == 'mixup_within_memory':
                 alpha = 0.4
                 lam = np.random.beta(alpha, alpha)
-                random_idxs = torch.randperm(self.num_replay_samples)
+                random_idxs = torch.randperm(x_for_model_update.shape[0])
                 replay_x = lam * replay_x + (1 - lam) * replay_x[random_idxs]
 
-                x_for_source = torch.cat((x_for_source, replay_x), dim=0)
-                x_for_model_update = x_for_source
+                x_for_model_update = torch.cat((x_for_model_update, replay_x), dim=0)
             else:
                 raise ValueError(f"Unknown replay augs strategy name: {self.cfg['replay_augs']}")
 
@@ -214,9 +216,6 @@ class Custom(nn.Module):
         features = self.encoder(x_for_model_update)
         outputs_update = self.classifier(features)
 
-
-        source_features = self.encoder_source(x_for_model_update)
-        
         
         # whether to apply softmax on targets while calculating cross entropy
         softmax_targets = True
@@ -230,20 +229,21 @@ class Custom(nn.Module):
                 
             if self.cfg['replay_augs'] == 'cotta':
                 # to have approximately one hot encoding after later softmax operation
-                replay_pseudo_labels *= 1e6
-                pseudo_labels[-self.num_replay_samples:] = replay_pseudo_labels
-                softmax_targets = True
+                # replay_pseudo_labels *= 1e6
+                pseudo_labels = pseudo_labels.softmax(1)
+                pseudo_labels = torch.cat((pseudo_labels, replay_pseudo_labels), dim=0)
+                softmax_targets = False
 
             elif self.cfg['replay_augs'] == 'mixup_within_memory':
                 # to have approximately one hot encoding after later softmax operation
                 replay_pseudo_labels = lam * replay_pseudo_labels + (1 - lam) * replay_pseudo_labels[random_idxs]
                 pseudo_labels = pseudo_labels.softmax(1)
-                pseudo_labels[-self.num_replay_samples:] = replay_pseudo_labels
+                pseudo_labels = torch.cat((pseudo_labels, replay_pseudo_labels), dim=0)
                 softmax_targets = False
 
             elif self.cfg['replay_augs'] == 'mixup_from_memory':
-                pseudo_labels = lam * pseudo_labels.softmax(1) + (1 - lam) * replay_pseudo_labels[:pseudo_labels.shape[0]]
-                pseudo_labels_before_softmax = torch.log(pseudo_labels)
+                pseudo_labels = lam * pseudo_labels.softmax(1) + (1 - lam) * replay_pseudo_labels
+                pseudo_labels = torch.log(pseudo_labels)
                 softmax_targets = True
                 
             else:
@@ -251,32 +251,30 @@ class Custom(nn.Module):
 
 
 
-        entropies = softmax_entropy(outputs_update / self.distillation_out_temp, pseudo_labels_before_softmax / self.distillation_out_temp, softmax_targets)
+        entropies = softmax_entropy(outputs_update / self.distillation_out_temp, pseudo_labels / self.distillation_out_temp, softmax_targets)
         
         if self.cfg['sampling_method'] == 'eata_weight' or self.cfg['sampling_method'] == 'stochastic_entropy_weight':
             entropies = entropies.mul(coeff) # reweight entropy losses for diff. samples
         
         loss = (1 - self.features_distillation_weight) * entropies.mean(0)
-        loss += self.features_distillation_weight * nn.functional.mse_loss(features, source_features)
+
+        if self.features_distillation_weight != 0:
+            source_features = self.encoder_source(x_for_model_update)
+            loss += self.features_distillation_weight * nn.functional.mse_loss(features, source_features)
 
         loss.backward()
         optimizer.step()
         optimizer.zero_grad()
-        # Teacher update
-        self.model_ema = update_ema_variables(ema_model = self.model_ema, model = self.model, alpha_teacher=self.cfg['mt'])
-        # Stochastic restore
 
-        if False:
-            for nm, m  in self.model.named_modules():
-                if 'model.' in nm:
-                    nm = nm.replace('model.', '')
-                for npp, p in m.named_parameters():
-                    if npp in ['weight', 'bias'] and p.requires_grad:
-                        mask = (torch.rand(p.shape)<self.rst).float().cuda() 
-                        with torch.no_grad():
-                            p.data = self.model_state[f"{nm}.{npp}"] * mask + p * (1.-mask)
+        if self.cfg['update_method'] == 'emateacher':
+            # Teacher update
+            self.model_ema = update_ema_variables(ema_model = self.model_ema, model = self.model, alpha_teacher=self.cfg['mt'])
 
-        return ema_outputs
+
+        if self.cfg['update_method'] == 'emateacher':
+            return ema_outputs
+        else:
+            return student_outputs
 
 def update_model_probs(current_model_probs, new_probs):
     if current_model_probs is None:
