@@ -95,6 +95,8 @@ class ConfigParser:
                             help="Learning rate")
         parser.add_argument('--distillation_out_temp', type=int, default=argparse.SUPPRESS,
                             help="Temperature of distillation on output level")
+        parser.add_argument('--memory_size', type=int, default=argparse.SUPPRESS,
+                            help="Size of class-balanced memory")
         parser.add_argument('--features_distillation_weight', type=float, default=argparse.SUPPRESS,
                             help="The weight of distillation on feature level, 0 for no distillation. (Loss = weight * feature_distillation + loss)")
         parser.add_argument('--memory_per_class', type=int, default=argparse.SUPPRESS,

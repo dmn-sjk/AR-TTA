@@ -136,7 +136,18 @@ def get_custom_strategy(cfg, model: torch.nn.Module, eval_plugin: EvaluationPlug
         # class-balanced memory
         for class_id in range(cfg['num_classes']):
             class_idxs = (torch.Tensor(train_dataset.targets) == class_id).nonzero(as_tuple=True)[0]
-            chosen_idxs = np.random.choice(class_idxs, cfg['memory_per_class'])
+            
+            if 'memory_size' in cfg.keys():
+                cfg['memory_per_class'] = int(cfg['memory_size'] / cfg['num_classes'])
+
+                rest = cfg['memory_size'] % cfg['num_classes']
+                if class_id < rest:
+                    chosen_idxs = np.random.choice(class_idxs, cfg['memory_size'] // cfg['num_classes'] + 1)
+                else:
+                    chosen_idxs = np.random.choice(class_idxs, cfg['memory_size'] // cfg['num_classes'])
+                    
+            else:
+                chosen_idxs = np.random.choice(class_idxs, cfg['memory_per_class'])
 
             for idx in chosen_idxs:
                 # train_dataset[idx][0] - single sample image, adding dimension with None 
