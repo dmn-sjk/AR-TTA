@@ -64,7 +64,7 @@ def main():
             #     strategy.eval(benchmark.test_stream[0], num_workers=cfg['num_workers'])
 
             # avalanche cheat
-            experience.current_experience = i
+            experience.current_experience = 0
             strategy.train(experience, eval_streams=[], shuffle=shuffle,
                         num_workers=cfg['num_workers'])
 

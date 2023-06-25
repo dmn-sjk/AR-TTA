@@ -100,16 +100,17 @@ class JSONLogger(BaseLogger, SupervisedPlugin):
         for key, val in metric_values.items():
             if "train_phase" in key:
 
-                task_nr_idx = key.find('Task') + 4
-                task_nr = int(key[task_nr_idx : task_nr_idx + 3])
-                if task_nr != strategy.experience.current_experience:
-                    continue
+                # task_nr_idx = key.find('Task') + 4
+                # task_nr = int(key[task_nr_idx : task_nr_idx + 3])
+                # if task_nr != strategy.experience.current_experience:
+                #     continue
                 
                 if key.startswith("Top1_Acc_MB"):
                     # result_key = <metric_type>/<phase (train/eval)>/<stream_name>
                     # without task id
                     result_key =  key.rsplit('/', 1)[0]
                     self._append_results(result_key, val[1])
+                    strategy.evaluator.all_metric_results[key] = [[], []]
                 elif key.startswith("Time_Epoch"):
                     result_key = key.split('/')[:-1]
                     result_key[0] = 'AvgTimeIter'
@@ -122,19 +123,20 @@ class JSONLogger(BaseLogger, SupervisedPlugin):
 
                     avg_iteration_time = val[1][0] / val[0][0]
                     self._append_results(new_result_key, avg_iteration_time)
-                elif key.startswith("Top1_ClassAcc_Epoch"):
-                    # delete task id
-                    result_key = key[:-9]
-                    # add class id
-                    class_id = key.split('/')[-1]
-                    result_key += class_id
-                    self._append_results(result_key, val[1][0])
+                    strategy.evaluator.all_metric_results[key] = [[], []]
+        #         elif key.startswith("Top1_ClassAcc_Epoch"):
+        #             # delete task id
+        #             result_key = key[:-9]
+        #             # add class id
+        #             class_id = key.split('/')[-1]
+        #             result_key += class_id
+        #             self._append_results(result_key, val[1][0])
 
-                    classes_not_logged_acc.remove(int(class_id))
+        #             classes_not_logged_acc.remove(int(class_id))
                     
-        for class_id in classes_not_logged_acc:
-            result_key = f"Top1_ClassAcc_Epoch/train_phase/train_stream/{class_id}"
-            self._append_results(result_key, None)
+        # for class_id in classes_not_logged_acc:
+        #     result_key = f"Top1_ClassAcc_Epoch/train_phase/train_stream/{class_id}"
+        #     self._append_results(result_key, None)
 
         self._update_json_file()
         self.training_task_counter += 1
