@@ -54,6 +54,9 @@ class MectaNorm2d(BatchNorm2d):
         self.forward_cache_size = None
         
         self.smoothing_beta = smoothing_beta
+        
+        self.saved_running_mean = None
+        self.saved_running_var = None
 
     def update_dist_metric(self, dist_metric):
         if dist_metric == 'kl':
@@ -65,6 +68,10 @@ class MectaNorm2d(BatchNorm2d):
         else:
             raise RuntimeError(f"Unknown distance: {dist_metric}")
 
+    def save_running_stats(self):
+        self.saved_running_mean = deepcopy(self.running_mean)
+        self.saved_running_var = deepcopy(self.running_var)
+        
     def reset(self):
         # if not keep_stats:
         #     self.reset_running_stats()
@@ -111,8 +118,13 @@ class MectaNorm2d(BatchNorm2d):
                                             self.running_mean, self.running_var, 
                                             eps=1e-3)  # self.eps) Small eps can reduce the sensitivity to unstable small variance.
                     new_beta = 1. - torch.exp(- self.bn_dist_scale * dist.mean())
-                    
-                    beta = (1 - self.smoothing_beta) * self.beta + self.smoothing_beta * new_beta 
+
+                    beta = (1 - self.smoothing_beta) * self.beta + self.smoothing_beta * new_beta
+
+                    print(f"\n___{self.name}___")
+                    print(f"Dist: \t\t\t\t{dist.mean().item()}")
+                    print(f"Beta from current batch: \t{new_beta.item()}")
+                    print(f"EMA beta: \t\t\t{beta.item()}")
 
                     # update beta
                     self.beta = beta.item() # if hasattr(beta, 'item') else beta
@@ -120,9 +132,14 @@ class MectaNorm2d(BatchNorm2d):
                 else:  # use constant beta
                     beta = self.beta if self.past_size > 0 else self.init_beta
 
+
                 if beta < 1.:  # accumulate
-                    self.running_mean.mul_((1-beta)).add_(batch_mean.mul(beta))
-                    self.running_var.mul_((1-beta)).add_(batch_var.mul(beta))
+                    if self.saved_running_var is not None and self.saved_running_mean is not None:
+                        self.running_mean.data.copy_(self.saved_running_mean).mul_((1-beta)).add_(batch_mean.mul(beta))
+                        self.running_var.data.copy_(self.saved_running_var).mul_((1-beta)).add_(batch_var.mul(beta))
+                    else:
+                        self.running_mean.mul_((1-beta)).add_(batch_mean.mul(beta))
+                        self.running_var.mul_((1-beta)).add_(batch_var.mul(beta))
                 else:
                     self.running_mean.data.copy_(batch_mean)
                     self.running_var.data.copy_(batch_var)
@@ -577,6 +594,7 @@ def replace_bn(model, name, n_repalced=0, **abn_kwargs):
             )
             new_mod.load_state_dict(target_mod.state_dict())
             setattr(model, mod_name, new_mod)
+            new_mod.save_running_stats()
         else:
             n_repalced = replace_bn(
                 target_mod, name + '.' + mod_name, n_repalced=n_repalced, **abn_kwargs)
