@@ -64,7 +64,8 @@ class ConfigParser:
                             help='Name of the run')
         if self.mode == 'tta':
             parser.add_argument('--benchmark', type=str, default=None, required=True,
-                                help='cifar10c_long | cifar10c_repetitive | cifar10c_standard | clad | shift_weather | shift_timeofday | shift_mix')
+                                help='cifar10c_long | cifar10c_repetitive | cifar10c_standard | clad | shift_weather | shift_timeofday | \
+                                    shift_mix | shift_mix_no_source')
             parser.add_argument('--method', type=str, default=None, required=True,
                                 help='frozen | finetune | tent | cotta | eata | sar | custom')
         parser.add_argument('--model', type=str, default=argparse.SUPPRESS,
