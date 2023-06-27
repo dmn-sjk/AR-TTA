@@ -122,7 +122,10 @@ class MectaNorm2d(BatchNorm2d):
                     beta = (1 - self.smoothing_beta) * self.beta + self.smoothing_beta * new_beta
 
                     print(f"\n___{self.name}___")
-                    print(f"Dist: \t\t\t\t{dist.mean().item()}")
+                    dist_to_source_stats = self.dist_metric(batch_mean, batch_var,
+                                            self.saved_running_mean, self.saved_running_var, 
+                                            eps=1e-3)
+                    print(f"Dist: \t\t\t\t{dist_to_source_stats.mean().item()}")
                     print(f"Beta from current batch: \t{new_beta.item()}")
                     print(f"EMA beta: \t\t\t{beta.item()}")
 
