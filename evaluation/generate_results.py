@@ -459,17 +459,17 @@ def plot_plot_per_timeofday_acc(results, domains, args):
             
             # day for SHIFT, T1 and T3 are day sequences of CLAD (old numbering)
             if 'day' in domain or any([day_domain in domain for day_domain in clad_day_domains]):
-                sum_day = np.sum(accs)
-                num_day = len(accs)
+                sum_day += np.sum(accs)
+                num_day += len(accs)
 
             # night for SHIFT, T0, T2, T4 are day sequences of CLAD (old numbering)
             elif 'night' in domain or any([night_domain in domain for night_domain in clad_night_domains]):
-                sum_night = np.sum(accs)
-                num_night = len(accs)
+                sum_night += np.sum(accs)
+                num_night += len(accs)
             
             elif 'dawn/dusk' in domain:
-                sum_dawndusk = np.sum(accs)
-                num_dawndusk = len(accs)
+                sum_dawndusk += np.sum(accs)
+                num_dawndusk += len(accs)
 
         acc_day, acc_night, acc_dawndusk = 100, 100, 100
         if num_day != 0:
