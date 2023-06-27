@@ -13,6 +13,7 @@ from .eata_strategy import get_eata_strategy
 from .note_strategy import get_note_strategy
 from .sar_strategy import get_sar_strategy
 from .custom_strategy import get_custom_strategy
+from .bn_stats_adapt_strategy import get_bn_stats_adapt_strategy
 from loggers import get_eval_plugin
 
 
@@ -72,6 +73,8 @@ def get_strategy(cfg):
         strategy = get_sar_strategy(cfg, model, eval_plugin, plugins)
     elif cfg['method'] == 'custom':
         strategy = get_custom_strategy(cfg, model, eval_plugin, plugins)
+    elif cfg['method'] == 'bn_stats_adapt':
+        strategy = get_bn_stats_adapt_strategy(cfg, model, eval_plugin, plugins)
     else:
         raise ValueError(f"Unknown method: {cfg['method']}")
     

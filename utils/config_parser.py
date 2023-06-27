@@ -67,7 +67,7 @@ class ConfigParser:
                                 help='cifar10c_long | cifar10c_repetitive | cifar10c_standard | clad | shift_weather | shift_timeofday | \
                                     shift_mix | shift_mix_no_source')
             parser.add_argument('--method', type=str, default=None, required=True,
-                                help='frozen | finetune | tent | cotta | eata | sar | custom')
+                                help='frozen | finetune | tent | cotta | eata | sar | custom | bn_stats_adapt')
         parser.add_argument('--model', type=str, default=argparse.SUPPRESS,
                             help='name of the model')
         parser.add_argument('--project_name', type=str, default=argparse.SUPPRESS,
