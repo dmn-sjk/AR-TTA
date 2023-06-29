@@ -9,17 +9,30 @@ import shutil
 import yaml
 import matplotlib.colors as mcolors
 import glob
+import seaborn as sns
+from matplotlib.ticker import FormatStrFormatter
+import matplotlib.font_manager as font_manager
 
+sns.set_theme()
+sns.set_context("paper")
+
+font_legend = font_manager.FontProperties(
+                                   style='normal', size=12)
+
+font = {'weight': 'normal',
+        'size': 12,
+        }
 
 
 LOGS_TO_USE = []
 RESULTS_FOLDER = 'results'
 LOGS_FOLDER = 'logs'
-WINDOW_SIZE = 500 # for batch-wise train acc plot
+WINDOW_SIZE = 100 # for batch-wise train acc plot
 DISCARD_REPEATED_DOMAINS = False
 NOT_INCLUDE_LAST_DOMAIN_IN_AVERAGE = True
 OLD_CLAD_DOMAIN_NAMES = False
-POSSIBLE_METHODS = ['cotta', 'eata', 'tent', 'frozen', 'finetune', 'sar', 'custom']
+POSSIBLE_METHODS = ['cotta', 'eata', 'tent', 'frozen', 'finetune', 'sar', 'custom', 'bn_stats_adapt']
+LABELS = ['CoTTA', 'EATA', 'TENT', 'Source', 'finetune', 'SAR', 'AR-TTA (ours)', 'BN stats adapt']
 USELESS_COLORS = ['gainsboro', 'snow', 'mistyrose', 'seashell', 'linen', 'oldlace',
                   'comsilk', 'ivory', 'lightyellow', 'honeydew', 'azure', 'aliceblue',
                   'lavender', 'lavenderblush', 'mintcream']
@@ -28,15 +41,19 @@ colors = {}
 
 
 def get_label(log_name):
-    for method in POSSIBLE_METHODS:
+    for i, method in enumerate(POSSIBLE_METHODS):
         start_idx = log_name.find(method)
         if start_idx != -1:
+            # return LABELS[i]
             return log_name[start_idx:]
     raise ValueError(f"No method name found in log name: {log_name}")
 
 def get_plot_color(method):
     if method in colors.keys():
         return colors[method]
+    
+    if 'custom' in method:
+        return 'tab:green'
 
     if 'frozen' in method and 'tab:red' not in colors.values():
         colors[method] = 'tab:red'
@@ -267,11 +284,14 @@ def plot_batchwise_acc_train(results, domains, args):
     window = deque(maxlen=WINDOW_SIZE)
 
     # TRAINING SEQUENCES
-    fig, ax = plt.subplots(figsize=(15, 10))
+    fig, ax = plt.subplots(figsize=(7, 5))
     for method in LOGS_TO_USE:
         whole_results = []
         window.clear()
-        for task_results in results[method]["Top1_Acc_MB/train_phase/train_stream"]:
+        for i, task_results in enumerate(results[method]["Top1_Acc_MB/train_phase/train_stream"]):
+            # if i > 4:
+            #     break
+                
             window_accs = []
             window.clear()
             for batch_acc in task_results:
@@ -279,23 +299,29 @@ def plot_batchwise_acc_train(results, domains, args):
                 window_accs.append(np.mean(window))
             whole_results.extend(window_accs)
         accs = np.array(whole_results) * 100.0
-        ax.plot(range(len(whole_results)), accs, label=get_label(method), color=get_plot_color(method))
+        if 'frozen'in method:
+            ax.plot(range(len(whole_results)), accs, '--', label=get_label(method), color=get_plot_color(method))
+        else:
+            ax.plot(range(len(whole_results)), accs, '-', label=get_label(method), color=get_plot_color(method))
 
     end_of_x_axis = 0
     xticks = [end_of_x_axis]
-    for task_results in results[LOGS_TO_USE[0]]["Top1_Acc_MB/train_phase/train_stream"]:
+    for i, task_results in enumerate(results[LOGS_TO_USE[0]]["Top1_Acc_MB/train_phase/train_stream"]):
+        # if i > 4:
+        #     break
         task_samples = len(task_results)
         end_of_x_axis += task_samples
         xticks.append(end_of_x_axis)
 
-    plt.xticks(xticks, [*domains, ''], rotation=45)
-    plt.grid(axis='both')
-    plt.legend(loc='best')
+    plt.xticks(xticks, [*domains, ''], rotation=0, fontsize=12)
+    plt.yticks(fontsize=12)
+    # plt.grid(axis='both')
+    plt.legend(loc='best', prop=font_legend)
     plt.tight_layout()
-    plt.subplots_adjust(top=0.95)
-    plt.title("Train sequences accuracy")
-    plt.xlabel("Task")
-    plt.ylabel("Accuracy [%]")
+    # plt.subplots_adjust(top=0.95)
+    # plt.title("Train sequences accuracy")
+    plt.xlabel("Task", fontdict=font)
+    plt.ylabel("Accuracy [%]", fontdict=font)
     if args.save_results:
         plt.savefig(os.path.join(RESULTS_FOLDER, args.results_name, 'train_batchwise_acc_plot'))
     else:
