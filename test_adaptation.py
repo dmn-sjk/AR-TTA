@@ -49,7 +49,7 @@ def main():
 
         elif cfg['dataset'] == 'shift':
             shuffle = False
-            domain_to_experience_idx = None
+            from benchmarks.shift import domain_to_experience_idx
         else:
             raise ValueError(f"Unknown dataset: {cfg['dataset']}")
 
