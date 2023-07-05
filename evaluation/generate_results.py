@@ -17,17 +17,17 @@ sns.set_theme()
 sns.set_context("paper")
 
 font_legend = font_manager.FontProperties(
-                                   style='normal', size=12)
+                                   style='normal', size=15)
 
 font = {'weight': 'normal',
-        'size': 12,
+        'size': 15,
         }
 
 
 LOGS_TO_USE = []
 RESULTS_FOLDER = 'results'
 LOGS_FOLDER = 'logs'
-WINDOW_SIZE = 100 # for batch-wise train acc plot
+WINDOW_SIZE = 500 # for batch-wise train acc plot
 DISCARD_REPEATED_DOMAINS = False
 NOT_INCLUDE_LAST_DOMAIN_IN_AVERAGE = True
 OLD_CLAD_DOMAIN_NAMES = False
@@ -44,8 +44,8 @@ def get_label(log_name):
     for i, method in enumerate(POSSIBLE_METHODS):
         start_idx = log_name.find(method)
         if start_idx != -1:
-            # return LABELS[i]
-            return log_name[start_idx:]
+            return LABELS[i]
+            # return log_name[start_idx:]
     raise ValueError(f"No method name found in log name: {log_name}")
 
 def get_plot_color(method):
@@ -158,6 +158,15 @@ def get_and_check_domains():
     for log in LOGS_TO_USE:
         with open(os.path.join(LOGS_FOLDER, log, log + '_config.yaml'), "r") as f:
             curr_domains = yaml.load(f, Loader=yaml.Loader)['domains']
+
+            if 'frozen' in log:
+                if 'shift' in log:
+                    curr_domains = curr_domains[1:]
+                    # curr_domains = curr_domains[:-1]
+                elif 'repetitive' in log:
+                    curr_domains = curr_domains[:15]
+            else:
+                curr_domains = curr_domains[:-1]
             
             if len(curr_domains) == 0:
                 raise ValueError("Empty domains list!")
@@ -284,7 +293,7 @@ def plot_batchwise_acc_train(results, domains, args):
     window = deque(maxlen=WINDOW_SIZE)
 
     # TRAINING SEQUENCES
-    fig, ax = plt.subplots(figsize=(7, 5))
+    fig, ax = plt.subplots(figsize=(15, 15))
     for method in LOGS_TO_USE:
         whole_results = []
         window.clear()
@@ -313,15 +322,16 @@ def plot_batchwise_acc_train(results, domains, args):
         end_of_x_axis += task_samples
         xticks.append(end_of_x_axis)
 
-    plt.xticks(xticks, [*domains, ''], rotation=0, fontsize=12)
-    plt.yticks(fontsize=12)
+    plt.xticks(xticks, [*domains, ''], rotation=90, fontsize=15)
+    plt.yticks(fontsize=15)
     # plt.grid(axis='both')
     plt.legend(loc='best', prop=font_legend)
-    plt.tight_layout()
-    # plt.subplots_adjust(top=0.95)
+    # plt.tight_layout()
+    # plt.subplots_adjust(top=0.9)
     # plt.title("Train sequences accuracy")
-    plt.xlabel("Task", fontdict=font)
+    plt.xlabel("Domain", fontdict=font)
     plt.ylabel("Accuracy [%]", fontdict=font)
+    # ax.axis('scaled')
     if args.save_results:
         plt.savefig(os.path.join(RESULTS_FOLDER, args.results_name, 'train_batchwise_acc_plot'))
     else:
@@ -344,6 +354,7 @@ def plot_per_class_acc(results, domains, args):
     fig, axs = plt.subplots(nrows=nrows,
                             ncols=ncols, figsize=(15, 10))
 
+    print('\n----Per Class Acc---\n')
     for i, method in enumerate(logs_with_per_class_acc_data):
         if nrows > 1 and ncols > 1:  
             row = i // max_cols
@@ -356,6 +367,9 @@ def plot_per_class_acc(results, domains, args):
             ax = axs[col]
         
         class_id = 0
+        
+        per_class_means = []
+        
         # while True, because of lack of information about class num
         while True:
             if result_key + str(class_id) not in results[method].keys():
@@ -369,7 +383,14 @@ def plot_per_class_acc(results, domains, args):
             accs = np.multiply(accs_array, np.full_like(accs_array, 100), where=accs_array!=None)
             ax.plot(range(len(accs)), accs, marker='.', label=class_id)
 
+            per_class_means.append(np.mean(accs[accs != None]))
+
             class_id += 1
+            
+        print(method)
+        print(f"AMCA: {np.mean(per_class_means)}")
+        print(f"Min class accuracy: {np.min(per_class_means)}")
+        print('\n')
 
         ax.set_title(get_label(method))
         ax.set_xticks(range(len(domains)))
@@ -594,7 +615,43 @@ def main(args):
         copy_config_files()
 
     domains, accepted_domains_idxs = get_and_check_domains()
+    print(domains)
+    print(accepted_domains_idxs)
+    
     results = load_results(accepted_domains_idxs)
+    
+    
+    class_result_key = "Top1_ClassAcc_Epoch/train_phase/train_stream/"
+    
+    for method in LOGS_TO_USE:
+        
+        if 'frozen' in method:
+            if 'shift' in method:
+                accepted_domains_idxs_mod = list(range(1, 15))
+            elif 'repetitive' in method:
+                accepted_domains_idxs_mod = list(range(0, 15))
+        else:
+            accepted_domains_idxs_mod = accepted_domains_idxs
+            
+        print(accepted_domains_idxs_mod)
+            
+        results_mod = []
+        for idx in accepted_domains_idxs_mod:
+            results_mod.append(results[method]["Top1_Acc_MB/train_phase/train_stream"][idx])
+
+        results[method]["Top1_Acc_MB/train_phase/train_stream"] = results_mod
+        
+        class_id = 0
+        while True:
+            current_key = class_result_key + str(class_id) 
+            if current_key not in results[method].keys():
+                break
+            
+            results[method][current_key] = list(np.array(results[method][current_key])[accepted_domains_idxs])
+            
+            print(len(results[method][current_key]))
+            
+            class_id += 1
     
     # =======================================================================================
     table = [["method", *domains, "Avg"], *[[] for i in range(len(LOGS_TO_USE))]]
@@ -629,22 +686,22 @@ def main(args):
             for row in table:
                 writer.writerow(row)
     # =======================================================================================
-    plot_avgtime_avgacc(results, avg_accs_train, args)
+    # plot_avgtime_avgacc(results, avg_accs_train, args)
     # =======================================================================================
-    plot_batchwise_acc_train(results, domains, args)
+    # plot_batchwise_acc_train(results, domains, args)
     # =======================================================================================    
-    plot_domainwise_acc_train(results, domains, args)
+    # plot_domainwise_acc_train(results, domains, args)
     # =======================================================================================
-    plot_acc_val(results, domains, args)
+    # plot_acc_val(results, domains, args)
     # =======================================================================================
-    if args.per_class_acc:
-        plot_per_class_acc(results, domains, args)
+    # if args.per_class_acc:
+    # plot_per_class_acc(results, domains, args)
     # =======================================================================================
-    if args.pred_class_ratio:
-        plot_pred_class_ratio(results, domains, args)
+    # if args.pred_class_ratio:
+    #     plot_pred_class_ratio(results, domains, args)
     # =======================================================================================
-    if 'shift' in LOGS_TO_USE[0] or 'clad' in LOGS_TO_USE[0]:
-        per_time_of_day_accs = plot_plot_per_timeofday_acc(results, domains, args)
+    # if 'shift' in LOGS_TO_USE[0] or 'clad' in LOGS_TO_USE[0]:
+    #     per_time_of_day_accs = plot_plot_per_timeofday_acc(results, domains, args)
     # =======================================================================================
     # if 'frozen' in ''.join(LOGS_TO_USE):
     #     frozen_related_results_plot(per_domain_avg_accs_train, domains, args)
