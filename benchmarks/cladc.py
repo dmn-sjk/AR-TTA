@@ -15,9 +15,20 @@ def get_cladc_benchmark(cfg) -> GenericCLScenario:
     if cfg["end_with_source_domain"]:
         cfg['domains'][-1] = 'T0'
 
-    if cfg['benchmark'] == 'clad_long_random':
-        cfg['domains'] = list(np.random.choice(cfg['domains'][:-1], size=150))
-        cfg['domains'].append('T0')
+
+    if 'random' in cfg['benchmark']:
+        if cfg['benchmark'] == 'clad_long_random':
+            replace = True
+            size = 150
+        else:
+            replace = False
+            size = 5
+
+        if cfg["end_with_source_domain"]:
+            cfg['domains'] = list(np.random.choice(cfg['domains'][:-1], size=size, replace=replace))
+            cfg['domains'].append('T0')
+        else:
+            cfg['domains'] = list(np.random.choice(cfg['domains'], size=size, replace=replace))
 
     return benchmark
 

@@ -15,7 +15,7 @@ from datasets.cifar10c import CIFAR10CDataset
 def get_cifar10c_benchmark(cfg) -> GenericCLScenario:
     train_sets = []
     val_sets = []
-    if cfg['benchmark'] in ["cifar10c_standard", "cifar10c_long_random"]:
+    if cfg['benchmark'] in ["cifar10c_standard", "cifar10c_long_random", "cifar10c_random"]:
         corruptions = copy(STANDARD_DOMAINS_SEQ)
     elif cfg['benchmark'] == "cifar10c_long":
         corruptions = copy(LONG_DOMAINS_SEQ)
@@ -25,7 +25,9 @@ def get_cifar10c_benchmark(cfg) -> GenericCLScenario:
         raise ValueError("Unknown type of cifar benchmark")
 
     if cfg['benchmark'] == 'cifar10c_long_random':
-        cfg['domains'] = list(np.random.choice(corruptions, size=150))
+        cfg['domains'] = list(np.random.choice(corruptions, size=150, replace=True))
+    elif cfg['benchmark'] == 'cifar10c_random':
+        cfg['domains'] = list(np.random.choice(corruptions, size=len(corruptions), replace=False))
     else:
         cfg['domains'] = corruptions
     

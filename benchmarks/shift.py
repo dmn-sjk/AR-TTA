@@ -11,7 +11,9 @@ from avalanche.benchmarks.scenarios import GenericCLScenario
 
 from utils.transforms import get_transforms
 from datasets.shift import SHIFTClassificationDataset
-from constants.shift import WEATHERS_SEQUENCE, TIMEOFDAY_SEQUENCE
+from constants.shift import WEATHERS_SEQUENCE, TIMEOFDAY_SEQUENCE, STANDARD_SHIFT_MIX_DOMAIN_SEQUENCE
+
+
 
     
 def _get_weather_sets(cfg):
@@ -229,6 +231,15 @@ def get_shift_benchmark(cfg) -> GenericCLScenario:
         train_sets, val_sets, domains = _get_domains_hard_sets(cfg)
     elif cfg['benchmark'] == 'shift_mix_no_source':
         train_sets, val_sets, domains = _get_domains_mix_no_source_sets(cfg)
+    elif 'random' in cfg['benchmark']:
+        train_sets, val_sets, domains = _get_domains_mix_no_source_sets(cfg)
+        if cfg['benchmark'] == 'shift_mix_long_random':
+            replace = True
+            size = 150
+        else:
+            replace = False
+            size = len(domains)
+        domains = list(np.random.choice(domains, size=size, replace=replace))
     else:
         raise ValueError("Unknown type of shift benchmark")
     
@@ -283,3 +294,9 @@ def get_shift_benchmark(cfg) -> GenericCLScenario:
                                                   # train_transform=None,
                                                   # eval_transform=None
                                                   )
+    
+def domain_to_experience_idx(domain):
+    if domain in STANDARD_SHIFT_MIX_DOMAIN_SEQUENCE:
+        return STANDARD_SHIFT_MIX_DOMAIN_SEQUENCE.index(domain)
+    elif domain == 'daytime_clear':
+        return len(STANDARD_SHIFT_MIX_DOMAIN_SEQUENCE)
