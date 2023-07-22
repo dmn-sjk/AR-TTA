@@ -94,7 +94,7 @@ class ConfigParser:
                             help="Gamma value for exponential lr scheduler")
         parser.add_argument('--lr', type=float, default=argparse.SUPPRESS,
                             help="Learning rate")
-        parser.add_argument('--mecta_beta', type=float, default=argparse.SUPPRESS,
+        parser.add_argument('--init_beta', type=float, default=argparse.SUPPRESS,
                             help="Beta for stats ema")
         parser.add_argument('--bn_dist_scale', type=float, default=argparse.SUPPRESS,
                             help="Scale for distributions distance in MectaBN")
