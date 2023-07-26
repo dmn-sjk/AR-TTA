@@ -17,11 +17,25 @@ def main():
     experiment_name = get_experiment_name(cfg)
     print(f"\n{(len(experiment_name) + 17) * '='}\nExperiment name: {experiment_name}\n{(len(experiment_name) + 17) * '='}\n")
 
-    seeds = [None]
-    if cfg['seeds'] is not None:
-        seeds = cfg['seeds']
+
+    if cfg['dataset'] == 'cifar10c':
+        shuffle = True
+        from benchmarks.cifar10c import domain_to_experience_idx
         
-    config_saved = False
+    elif cfg['dataset'] == 'clad':
+        shuffle = False
+        from benchmarks.cladc import domain_to_experience_idx
+
+    elif cfg['dataset'] == 'shift':
+        shuffle = False
+        from benchmarks.shift import domain_to_experience_idx
+    else:
+        raise ValueError(f"Unknown dataset: {cfg['dataset']}")
+
+
+    seeds = [None]
+    if 'seeds' in cfg.keys() and len(cfg['seeds']) > 0:
+        seeds = cfg['seeds']
 
     for seed in seeds:
         if seed is not None:
@@ -35,24 +49,10 @@ def main():
         benchmark = get_benchmark(cfg)
         strategy = get_strategy(cfg)
 
-        if cfg['save_results'] and not config_saved:
+        if cfg['save_results']:
             cfg['git_commit'] = get_git_revision_hash()
             save_config(cfg, experiment_name)
-
-        if cfg['dataset'] == 'cifar10c':
-            shuffle = True
-            from benchmarks.cifar10c import domain_to_experience_idx
             
-        elif cfg['dataset'] == 'clad':
-            shuffle = False
-            from benchmarks.cladc import domain_to_experience_idx
-
-        elif cfg['dataset'] == 'shift':
-            shuffle = False
-            from benchmarks.shift import domain_to_experience_idx
-        else:
-            raise ValueError(f"Unknown dataset: {cfg['dataset']}")
-
         for i, experience in enumerate(experience_generator(benchmark.train_stream, 
                                                         domains=cfg['domains'],
                                                         domains_to_exp_idx_func=domain_to_experience_idx)):
@@ -63,7 +63,7 @@ def main():
             #     print("Initial eval...")
             #     strategy.eval(benchmark.test_stream[0], num_workers=cfg['num_workers'])
 
-            # avalanche cheat
+            # avalanche cheat for correclty saving results
             experience.current_experience = 0
             strategy.train(experience, eval_streams=[], shuffle=shuffle,
                         num_workers=cfg['num_workers'])

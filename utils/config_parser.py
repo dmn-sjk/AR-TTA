@@ -82,7 +82,7 @@ class ConfigParser:
                             help='Num workers to use for dataloading')
         parser.add_argument('--cuda', type=int, default=argparse.SUPPRESS,
                             help='Whether to use cuda and which GPU to use, -1 if not')
-        parser.add_argument('--seeds', type=lambda s: [int(item) for item in s.split(',')], default=argparse.SUPPRESS,
+        parser.add_argument('--seeds', type=lambda s: [int(item) for item in s.strip().split(',')], default=argparse.SUPPRESS,
                             help='List of random seeds. Use comma to delimeter: --seeds 1234,1235,1236')
         parser.add_argument('--batch_size', type=int, default=argparse.SUPPRESS,
                             help="Training batch size")

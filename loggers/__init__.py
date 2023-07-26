@@ -1,6 +1,6 @@
 from .improved_wandb_logger import ImprovedWandBLogger
 from .json_logger import JSONLogger
-from utils.utils import get_experiment_name, get_experiment_folder
+from utils.utils import get_experiment_name, get_experiment_folder, get_seed_folder
 
 from avalanche.logging import TextLogger, InteractiveLogger, WandBLogger, CSVLogger
 from avalanche.evaluation.metrics import accuracy_metrics, loss_metrics, amca_metrics, timing_metrics, EpochClassAccuracy
@@ -20,7 +20,7 @@ def get_eval_plugin(cfg, model: Module = None):
             os.makedirs(experiment_folder)
 
         if cfg['curr_seed'] is not None:
-            seed_folder = os.path.join(experiment_folder, 'seed' + str(cfg['curr_seed']))
+            seed_folder = get_seed_folder(cfg)
             if not os.path.exists(seed_folder):
                 os.makedirs(seed_folder)
 

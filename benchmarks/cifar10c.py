@@ -25,9 +25,9 @@ def get_cifar10c_benchmark(cfg) -> GenericCLScenario:
         raise ValueError("Unknown type of cifar benchmark")
 
     if cfg['benchmark'] == 'cifar10c_long_random':
-        cfg['domains'] = list(np.random.choice(corruptions, size=150, replace=True))
+        cfg['domains'] = np.random.choice(corruptions, size=150, replace=True).astype(str).tolist()
     elif cfg['benchmark'] == 'cifar10c_random':
-        cfg['domains'] = list(np.random.choice(corruptions, size=len(corruptions), replace=False))
+        cfg['domains'] = np.random.choice(corruptions, size=len(corruptions), replace=False).astype(str).tolist()
     else:
         cfg['domains'] = corruptions
     

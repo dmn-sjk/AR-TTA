@@ -8,6 +8,10 @@ import sys
 from avalanche.evaluation.metric_results import MetricValue
 from avalanche.logging import BaseLogger
 from avalanche.core import SupervisedPlugin
+from avalanche.evaluation.metrics import EpochClassAccuracy
+from avalanche.evaluation.metrics import Mean
+from collections import defaultdict
+from typing import Dict, Set
 
 if TYPE_CHECKING:
     from avalanche.training.templates import SupervisedTemplate
@@ -97,13 +101,9 @@ class JSONLogger(BaseLogger, SupervisedPlugin):
         # gotta do this because batch-wise acc is not passed via metric_values
         # (generally no metrics are passed after training for some reason)
         metric_values = strategy.evaluator.get_all_metrics()
+        keys_to_remove = []
         for key, val in metric_values.items():
             if "train_phase" in key:
-
-                # task_nr_idx = key.find('Task') + 4
-                # task_nr = int(key[task_nr_idx : task_nr_idx + 3])
-                # if task_nr != strategy.experience.current_experience:
-                #     continue
                 
                 if key.startswith("Top1_Acc_MB"):
                     # result_key = <metric_type>/<phase (train/eval)>/<stream_name>
@@ -124,19 +124,29 @@ class JSONLogger(BaseLogger, SupervisedPlugin):
                     avg_iteration_time = val[1][0] / val[0][0]
                     self._append_results(new_result_key, avg_iteration_time)
                     strategy.evaluator.all_metric_results[key] = [[], []]
-        #         elif key.startswith("Top1_ClassAcc_Epoch"):
-        #             # delete task id
-        #             result_key = key[:-9]
-        #             # add class id
-        #             class_id = key.split('/')[-1]
-        #             result_key += class_id
-        #             self._append_results(result_key, val[1][0])
+                elif key.startswith("Top1_ClassAcc_Epoch"):
+                    keys_to_remove.append(key)
+                    # delete task id
+                    result_key = key[:-9]
+                    # add class id
+                    class_id = key.split('/')[-1]
+                    result_key += class_id
+                    self._append_results(result_key, val[1][0])
 
-        #             classes_not_logged_acc.remove(int(class_id))
+                    classes_not_logged_acc.remove(int(class_id))
                     
-        # for class_id in classes_not_logged_acc:
-        #     result_key = f"Top1_ClassAcc_Epoch/train_phase/train_stream/{class_id}"
-        #     self._append_results(result_key, None)
+        for class_id in classes_not_logged_acc:
+            result_key = f"Top1_ClassAcc_Epoch/train_phase/train_stream/{class_id}"
+            self._append_results(result_key, None)
+
+        # for saving per class acc
+        for key in keys_to_remove:
+            del strategy.evaluator.all_metric_results[key]
+
+        for i, metric in enumerate(strategy.evaluator.metrics):
+            if isinstance(metric, EpochClassAccuracy):
+                strategy.evaluator.metrics[i]._class_accuracy._class_accuracies = defaultdict(lambda: defaultdict(Mean))
+                strategy.evaluator.metrics[i]._class_accuracy.classes: Dict[int, Set[int]] = defaultdict(set)
 
         self._update_json_file()
         self.training_task_counter += 1

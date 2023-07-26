@@ -5,6 +5,7 @@ import numpy as np
 import os
 import subprocess
 import yaml
+from copy import copy
 
 
 # ref: https://github.com/Oldpan/Pytorch-Memory-Utils/blob/master/gpu_mem_track.py
@@ -66,6 +67,9 @@ def get_experiment_name(cfg: dict) -> str:
 def get_experiment_folder(cfg: dict) -> str:
     return os.path.join(cfg['log_dir'], get_experiment_name(cfg))
 
+def get_seed_folder(cfg: dict) -> str:
+    return os.path.join(get_experiment_folder(cfg), 'seed' + str(cfg['curr_seed']))
+
 def get_git_revision_hash() -> str:
     return subprocess.check_output(['git', 'rev-parse', 'HEAD']).decode('ascii').strip()
 
@@ -79,5 +83,19 @@ def split_up_model(model, model_name):
     return encoder, classifier
 
 def save_config(cfg, experiment_name):
-    with open(os.path.join(get_experiment_folder(cfg), experiment_name + '_config.yaml'), 'w') as f:
-        yaml.dump(cfg, f, default_flow_style=False)
+    temp_cfg = copy(cfg)
+    del temp_cfg['domains']
+    
+    if cfg['curr_seed'] is not None:
+        with open(os.path.join(get_seed_folder(cfg), 'domains.yaml'), 'w') as f:
+            yaml.dump(cfg['domains'], f, default_flow_style=False)
+
+        del temp_cfg['curr_seed']
+        with open(os.path.join(get_experiment_folder(cfg), experiment_name + '_config.yaml'), 'w') as f:
+            yaml.dump(temp_cfg, f, default_flow_style=False)
+    else:
+        with open(os.path.join(get_experiment_folder(cfg), 'domains.yaml'), 'w') as f:
+            yaml.dump(cfg['domains'], f, default_flow_style=False)
+
+        with open(os.path.join(get_experiment_folder(cfg), experiment_name + '_config.yaml'), 'w') as f:
+            yaml.dump(temp_cfg, f, default_flow_style=False)

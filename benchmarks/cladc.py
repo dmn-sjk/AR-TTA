@@ -25,10 +25,10 @@ def get_cladc_benchmark(cfg) -> GenericCLScenario:
             size = 5
 
         if cfg["end_with_source_domain"]:
-            cfg['domains'] = list(np.random.choice(cfg['domains'][:-1], size=size, replace=replace))
+            cfg['domains'] = np.random.choice(cfg['domains'][:-1], size=size, replace=replace).astype(str).tolist()
             cfg['domains'].append('T0')
         else:
-            cfg['domains'] = list(np.random.choice(cfg['domains'], size=size, replace=replace))
+            cfg['domains'] = np.random.choice(cfg['domains'], size=size, replace=replace).astype(str).tolist()
 
     return benchmark
 

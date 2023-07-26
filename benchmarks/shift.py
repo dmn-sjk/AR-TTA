@@ -239,7 +239,7 @@ def get_shift_benchmark(cfg) -> GenericCLScenario:
         else:
             replace = False
             size = len(domains)
-        domains = list(np.random.choice(domains, size=size, replace=replace))
+        domains = np.random.choice(domains, size=size, replace=replace).astype(str).tolist()
     else:
         raise ValueError("Unknown type of shift benchmark")
     
