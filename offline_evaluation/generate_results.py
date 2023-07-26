@@ -29,7 +29,7 @@ RESULTS_FOLDER = 'results'
 LOGS_FOLDER = 'logs'
 WINDOW_SIZE = 500 # for batch-wise train acc plot
 DISCARD_REPEATED_DOMAINS = False
-NOT_INCLUDE_LAST_DOMAIN_IN_AVERAGE = True
+NOT_INCLUDE_LAST_DOMAIN_IN_AVERAGE = False
 OLD_CLAD_DOMAIN_NAMES = False
 POSSIBLE_METHODS = ['cotta', 'eata', 'tent', 'frozen', 'finetune', 'sar', 'custom', 'bn_stats_adapt']
 LABELS = ['CoTTA', 'EATA', 'TENT', 'Source', 'finetune', 'SAR', 'AR-TTA (ours)', 'BN stats adapt']
@@ -377,6 +377,7 @@ def plot_per_class_acc(results, domains, args):
 
                 
             accs_array = np.array(results[method][result_key + str(class_id)])
+            print(len(accs_array))
 
             # multiply only elements which are not None 
             # (in CLAD not all classes are in every sequence so the acc is none)
@@ -695,7 +696,7 @@ def main(args):
     # plot_acc_val(results, domains, args)
     # =======================================================================================
     # if args.per_class_acc:
-    # plot_per_class_acc(results, domains, args)
+    plot_per_class_acc(results, domains, args)
     # =======================================================================================
     # if args.pred_class_ratio:
     #     plot_pred_class_ratio(results, domains, args)
