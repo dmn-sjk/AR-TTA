@@ -3,7 +3,7 @@ project_name: continual_adaptation
 
 # general settings
 data_root: /raid/NFS_SHARE/datasets
-seed: 1234
+seeds: [1234]
 cuda: 0
 num_workers: 5 
 log_dir: logs

@@ -12,16 +12,23 @@ import os
 def get_eval_plugin(cfg, model: Module = None):
     loggers = [InteractiveLogger()]
 
-    experiment_name = get_experiment_name(cfg)
-    experiment_folder = get_experiment_folder(cfg)
-
-    if not os.path.exists(experiment_folder):
-        os.makedirs(experiment_folder)
-        
-    path_to_log_file = os.path.join(experiment_folder, experiment_name + '_results')
-
     if cfg['save_results']:
-        loggers.append(JSONLogger(cfg['num_classes'], open(path_to_log_file + '.json', 'w')))
+        experiment_name = get_experiment_name(cfg)
+        experiment_folder = get_experiment_folder(cfg)
+
+        if not os.path.exists(experiment_folder):
+            os.makedirs(experiment_folder)
+
+        if cfg['curr_seed'] is not None:
+            seed_folder = os.path.join(experiment_folder, 'seed' + str(cfg['curr_seed']))
+            if not os.path.exists(seed_folder):
+                os.makedirs(seed_folder)
+
+            path_to_log_file = os.path.join(seed_folder, experiment_name + '_results.json')
+        else:
+            path_to_log_file = os.path.join(experiment_folder, experiment_name + '_results.json')
+
+        loggers.append(JSONLogger(cfg['num_classes'], open(path_to_log_file, 'w')))
 
     if cfg['wandb']:
         params = {'group': f"tta_{cfg['dataset']}", 'job_type': f"{cfg['method']}_{cfg['run_name']}"}

@@ -4,6 +4,7 @@ from avalanche.benchmarks.utils import (
 )
 from avalanche.benchmarks.scenarios import GenericCLScenario
 from avalanche.benchmarks.scenarios.generic_benchmark_creation import create_multi_dataset_generic_benchmark
+from copy import copy
 
 from utils.transforms import get_transforms
 from constants.cifar import LONG_DOMAINS_SEQ, REPETITIVE_DOMAINS_SEQ, STANDARD_DOMAINS_SEQ
@@ -14,11 +15,11 @@ def get_cifar10c_benchmark(cfg) -> GenericCLScenario:
     train_sets = []
     val_sets = []
     if cfg['benchmark'] == "cifar10c_standard":
-        corruptions = STANDARD_DOMAINS_SEQ
+        corruptions = copy(STANDARD_DOMAINS_SEQ)
     elif cfg['benchmark'] == "cifar10c_long":
-        corruptions = LONG_DOMAINS_SEQ
+        corruptions = copy(LONG_DOMAINS_SEQ)
     elif cfg['benchmark'] == "cifar10c_repetitive":
-        corruptions = REPETITIVE_DOMAINS_SEQ
+        corruptions = copy(REPETITIVE_DOMAINS_SEQ)
     else:
         raise ValueError("Unknown type of cifar benchmark")
 

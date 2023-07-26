@@ -82,8 +82,8 @@ class ConfigParser:
                             help='Num workers to use for dataloading')
         parser.add_argument('--cuda', type=int, default=argparse.SUPPRESS,
                             help='Whether to use cuda and which GPU to use, -1 if not')
-        parser.add_argument('--seed', type=int, default=argparse.SUPPRESS,
-                            help='Random seed')
+        parser.add_argument('--seeds', type=lambda s: [int(item) for item in s.split(',')], default=argparse.SUPPRESS,
+                            help='List of random seeds. Use comma to delimeter: --seeds 1234,1235,1236')
         parser.add_argument('--batch_size', type=int, default=argparse.SUPPRESS,
                             help="Training batch size")
         parser.add_argument('--num_epochs', type=int, default=argparse.SUPPRESS,
@@ -125,12 +125,4 @@ class ConfigParser:
     def _overwrite_config_with_args(self, config: Dict, args: argparse.Namespace) -> Dict:
         config.update(vars(args))
         return config
-        
-        # for key, val in config.items():
-        #     if isinstance(val, dict):
-        #         self._overwrite_config_with_args(val)
-        #     else:
-        #         if key in vars(self.args).keys():
-        #             arg_val = getattr(self.args, key)
-        #             if arg_val is not None:
-        #                 config[key] = arg_val
+

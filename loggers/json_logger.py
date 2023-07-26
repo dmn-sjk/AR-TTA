@@ -40,8 +40,6 @@ class JSONLogger(BaseLogger, SupervisedPlugin):
         """
 
         super().__init__()
-        # os.makedirs(log_file_path, exist_ok=True)
-
         self.log_file = log_file
         self.results_dict = {}
         self.training_task_counter = 0
