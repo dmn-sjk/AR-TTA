@@ -105,6 +105,7 @@ dependencies:
       - pathtools==0.1.2
       - pillow==9.5.0
       - plyfile==0.8.1
+      - prettytable==3.8.0
       - protobuf==4.22.1
       - psutil==5.9.4
       - pyasn1==0.4.8
