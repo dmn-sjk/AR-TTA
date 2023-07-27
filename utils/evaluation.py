@@ -189,7 +189,9 @@ def generate_evaluation(results, domains_sequence, domains_sequence_idxs, source
     tab = PrettyTable(table_compact_version[0], float_format='.2', title=eval_name + 'evaluation results')
     tab.add_rows(table_compact_version[1:])
     print(tab)
-
+    # save table
+    with open(os.path.join(save_folder, 'evaluation.txt'), 'w') as f:
+        f.write(tab)
 
 def evaluate_results(cfg):
     experiment_name = get_experiment_name(cfg)
