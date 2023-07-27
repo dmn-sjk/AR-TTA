@@ -228,6 +228,8 @@ def evaluate_results(cfg):
         # (to meet the assumption in avg_per_seed_results func)
         if 'random' in cfg['benchmark']:
             per_seed_results, domains_sequence = unify_domains_order(per_seed_results, per_seed_domains_sequence, source_domain_idx)
+        else:
+            domains_sequence = per_seed_domains_sequence[list(per_seed_domains_sequence.keys())[0]]
         results = avg_per_seed_results(per_seed_results)
 
         # random seed-averaged check
