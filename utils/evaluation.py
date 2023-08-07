@@ -191,7 +191,7 @@ def generate_evaluation(results, domains_sequence, domains_sequence_idxs, source
     print(tab)
     # save table
     with open(os.path.join(save_folder, 'evaluation.txt'), 'w') as f:
-        f.write(tab)
+        f.write(str(tab))
 
 def evaluate_results(cfg):
     experiment_name = get_experiment_name(cfg)
