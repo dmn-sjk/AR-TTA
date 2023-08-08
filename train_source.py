@@ -31,7 +31,7 @@ def main():
     if 'seeds' in cfg.keys():
         if len(cfg['seeds']) > 1:
             raise NotImplementedError("Only single seed per source training supported for now")
-        set_seed(cfg['seeds'])
+        set_seed(cfg['seeds'][0])
         
     train_transform = get_transforms(cfg, train=True)
     val_transform = get_transforms(cfg, train=False)
