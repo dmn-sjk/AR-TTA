@@ -28,8 +28,10 @@ def main():
                                  if torch.cuda.is_available() and cfg['cuda'] >= 0
                                  else "cpu")
     
-    if cfg['seed'] is not None:
-        set_seed(cfg['seed'])
+    if cfg['seeds'] in cfg.keys():
+        if len(cfg['seeds']) > 1:
+            raise NotImplementedError("Only single seed per source training supported for now")
+        set_seed(cfg['seeds'])
         
     train_transform = get_transforms(cfg, train=True)
     val_transform = get_transforms(cfg, train=False)
