@@ -108,10 +108,10 @@ def avg_per_seed_results(per_seed_results):
     return results
 
 def generate_evaluation(results, domains_sequence, domains_sequence_idxs, source_domain_idx, num_classes, save_folder, eval_name=''):
-    table = [["class", *domains_sequence, "Avg. acc.", "Avg. mean class acc.", "Min class acc."], *[[] for i in range(num_classes + 1)]]
+    table = [["class", *domains_sequence, "Avg. acc.", "Avg. mean class acc.", "Min mean class acc."], *[[] for i in range(num_classes + 1)]]
     
     if source_domain_idx is not None:
-        table[0].extend(["Src. dom. avg acc.", "Src. dom. avg. mean class acc.", "Src. dom. min class acc."])
+        table[0].extend(["Src. dom. avg acc.", "Src. dom. avg. mean class acc."])
 
 
     # /* per class results */
@@ -129,7 +129,7 @@ def generate_evaluation(results, domains_sequence, domains_sequence_idxs, source
         table[class_id + 1].extend(list(class_accs))
         # Avg acc column
         table[class_id + 1].append(np.nanmean(class_accs))
-        # Avg mean class acc and Min class acc columns
+        # Avg mean class acc and Min  mean class acc columns
         table[class_id + 1].extend(['-', '-'])
 
         if source_domain_idx is not None:
@@ -142,8 +142,8 @@ def generate_evaluation(results, domains_sequence, domains_sequence_idxs, source
             # Source domain avg acc column
             table[class_id + 1].append(source_domain_acc)
             source_domain_per_class_accs.append(source_domain_acc)
-            # Source domain avg mean class acc and ain class acc columns
-            table[class_id + 1].extend(['-', '-'])
+            # Source domain avg mean class acc column
+            table[class_id + 1].append('-')
 
     # /* all classes results */
     # class column
@@ -163,16 +163,17 @@ def generate_evaluation(results, domains_sequence, domains_sequence_idxs, source
     table[num_classes + 1].append(np.mean(flattened_batchwise_accs))
     
     # Avg mean class acc and Min class acc columns
-    table[num_classes + 1].append(np.nanmean(all_class_accs_matrix))
-    table[num_classes + 1].append(np.nanmin(all_class_accs_matrix))
+    # first avg of classes then domains like AMCA in CLAD
+    avg_class_accs_matrix = np.nanmean(all_class_accs_matrix, axis=0)
+    table[num_classes + 1].append(np.nanmean(avg_class_accs_matrix))
+    table[num_classes + 1].append(np.nanmin(avg_class_accs_matrix))
  
     if source_domain_idx is not None:
         source_domain_acc = results[batchwise_acc_key][source_domain_idx]
         # Source domain avg acc column
         table[num_classes + 1].append(np.nanmean(source_domain_acc) * 100.0)
-        # Source domain avg mean class acc and Min class acc columns
+        # Source domain avg mean class acc column
         table[num_classes + 1].append(np.nanmean(source_domain_per_class_accs))
-        table[num_classes + 1].append(np.nanmin(source_domain_per_class_accs))
 
 
     # save table
