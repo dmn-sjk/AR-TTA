@@ -28,7 +28,7 @@ def main():
                                  if torch.cuda.is_available() and cfg['cuda'] >= 0
                                  else "cpu")
     
-    if cfg['seeds'] in cfg.keys():
+    if 'seeds' in cfg.keys():
         if len(cfg['seeds']) > 1:
             raise NotImplementedError("Only single seed per source training supported for now")
         set_seed(cfg['seeds'])
