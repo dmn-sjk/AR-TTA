@@ -52,7 +52,7 @@ def main():
         if cfg['save_results']:
             cfg['git_commit'] = get_git_revision_hash()
             save_config(cfg, experiment_name)
-            
+
         for i, experience in enumerate(experience_generator(benchmark.train_stream, 
                                                         domains=cfg['domains'],
                                                         domains_to_exp_idx_func=domain_to_experience_idx)):
