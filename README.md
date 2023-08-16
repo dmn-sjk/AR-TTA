@@ -62,7 +62,7 @@ tar -xvf cifar-10-python.tar.gz
 
 2. Download and decompress CIFAR10C dataset:
 ```bash
-wget https://zenodo.org/record/2535967/files/CIFAR-10-C.tar?download=1
+wget https://zenodo.org/api/files/a35f793a-6997-4603-a92f-926a6bc0fa60/CIFAR-10-C.tar
 tar -xvf CIFAR-10-C.tar
 ```
 3. Use `process_cifar.py` script from `utils` folder preprocess the cifar datasets:
