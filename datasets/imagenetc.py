@@ -1,0 +1,77 @@
+import torch
+from typing import Callable
+import os
+import numpy as np
+from torchvision.datasets import ImageNet
+import json
+from PIL import Image
+from torchvision.transforms.functional import pil_to_tensor
+
+from constants.corrupted import SEVERITIES, CORRUPTIONS
+
+
+
+class ImageNetCDataset(torch.utils.data.Dataset):
+    NUM_CLASSES = 1000
+
+    def __init__(self, data_root: str, corruption: str = None, 
+                 split: str = "test", severity: int = 5, 
+                 transforms: Callable =  None):
+        self.transforms = transforms
+        self.samples = []
+        self.targets = []
+        self.syn_to_class = {}
+        
+        if split == "train" and corruption is not None: 
+            raise ValueError("Train split of CIFAR10 is not corrupted")
+
+
+        with open(os.path.join(data_root, "ImageNet-C/imagenet_class_index.json"), "rb") as f:
+            json_file = json.load(f)
+            for class_id, v in json_file.items():
+                self.syn_to_class[v[0]] = int(class_id)
+
+        
+        if corruption is None:
+            folders_dir = os.path.join(data_root, 'ImageNet/ILSVRC/Data/CLS-LOC', split)
+        else:
+            if severity not in SEVERITIES:
+                raise ValueError("Severity level unavailable")
+
+            if corruption not in CORRUPTIONS:
+                raise ValueError(f"Unknown corruption: {corruption}")
+            
+            folders_dir = os.path.join(data_root, "ImageNet-C", corruption, str(severity))
+
+        if split == 'val' and corruption is None:
+            with open(os.path.join(data_root, "ImageNet-C/ILSVRC2012_val_labels.json"), "rb") as f:
+                val_to_syn = json.load(f)
+
+            for entry in os.listdir(folders_dir):
+                syn_id = val_to_syn[entry]
+                target = self.syn_to_class[syn_id]
+                sample_path = os.path.join(folders_dir, entry)
+                self.samples.append(sample_path)
+                self.targets.append(target)      
+        else:
+            for syn_id in os.listdir(folders_dir):
+                target = self.syn_to_class[syn_id]
+                syn_folder = os.path.join(folders_dir, syn_id)
+                for sample in os.listdir(syn_folder):
+                    sample_path = os.path.join(syn_folder, sample)
+                    self.samples.append(sample_path)
+                    self.targets.append(target)
+                
+    def __len__(self):
+        return len(self.samples)
+        
+    def __getitem__(self, idx):
+        x = Image.open(self.samples[idx]).convert("RGB")
+        x = pil_to_tensor(x)
+    
+        x = x.to(torch.float32)
+        x /= 255.0
+
+        if self.transforms:
+            x = self.transforms(x)
+        return x, self.targets[idx]

@@ -22,6 +22,10 @@ def main():
         shuffle = True
         from benchmarks.cifar10c import domain_to_experience_idx
         
+    elif cfg['dataset'] == 'imagenetc':
+        shuffle = True
+        from benchmarks.imagenetc import domain_to_experience_idx
+        
     elif cfg['dataset'] == 'clad':
         shuffle = False
         from benchmarks.cladc import domain_to_experience_idx

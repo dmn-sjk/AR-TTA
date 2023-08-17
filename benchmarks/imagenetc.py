@@ -9,36 +9,27 @@ import numpy as np
 
 from utils.transforms import get_transforms
 from constants.corrupted import LONG_DOMAINS_SEQ, REPETITIVE_DOMAINS_SEQ, STANDARD_DOMAINS_SEQ
-from datasets.cifar10c import CIFAR10CDataset
+from datasets.imagenetc import ImageNetCDataset
 
 
-def get_cifar10c_benchmark(cfg) -> GenericCLScenario:
+def get_imagenetc_benchmark(cfg) -> GenericCLScenario:
     train_sets = []
     val_sets = []
-    if cfg['benchmark'] in ["cifar10c_standard", "cifar10c_long_random", "cifar10c_random"]:
+    if cfg['benchmark'] in ["imagenetc_standard"]:
         corruptions = copy(STANDARD_DOMAINS_SEQ)
-    elif cfg['benchmark'] == "cifar10c_long":
-        corruptions = copy(LONG_DOMAINS_SEQ)
-    elif cfg['benchmark'] == "cifar10c_repetitive":
-        corruptions = copy(REPETITIVE_DOMAINS_SEQ)
     else:
         raise ValueError("Unknown type of cifar benchmark")
 
-    if cfg['benchmark'] == 'cifar10c_long_random':
-        cfg['domains'] = np.random.choice(corruptions, size=150, replace=True).astype(str).tolist()
-    elif cfg['benchmark'] == 'cifar10c_random':
-        cfg['domains'] = np.random.choice(corruptions, size=len(corruptions), replace=False).astype(str).tolist()
-    else:
-        cfg['domains'] = corruptions
+    cfg['domains'] = corruptions
     
     transforms_test = get_transforms(cfg, train=False)
 
-    val_sets.append(CIFAR10CDataset(cfg['data_root'], corruption=None, split="test", transforms=transforms_test))
+    val_sets.append(ImageNetCDataset(cfg['data_root'], corruption=None, split="val", transforms=transforms_test))
     for corruption in corruptions:
-        train_sets.append(CIFAR10CDataset(cfg['data_root'], corruption=corruption, split="test", transforms=transforms_test, imbalanced=cfg['imbalanced']))        
+        train_sets.append(ImageNetCDataset(cfg['data_root'], corruption=corruption, split="val", transforms=transforms_test))        
 
     if cfg['end_with_source_domain']:
-        train_sets.append(CIFAR10CDataset(cfg['data_root'], corruption=None, split="test", transforms=transforms_test))
+        train_sets.append(ImageNetCDataset(cfg['data_root'], corruption=None, split="val", transforms=transforms_test))
         cfg['domains'].append('clear')
 
     # transform_groups = dict(

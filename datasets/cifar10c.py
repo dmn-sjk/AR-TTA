@@ -3,7 +3,7 @@ from typing import Callable
 import os
 import numpy as np
 
-from constants.cifar import SEVERITIES, CORRUPTIONS
+from constants.corrupted import SEVERITIES, CORRUPTIONS
 
 
 
@@ -45,9 +45,9 @@ class CIFAR10CDataset(torch.utils.data.Dataset):
                 self.data_filename = corruption + '.npy'
                 self.label_filename = 'labels.npy'
 
-        self.preprocessing()
+        self._preprocessing()
 
-    def preprocessing(self):
+    def _preprocessing(self):
 
         path = os.path.join(self.dataset_path, self.sub_path1, self.sub_path2)
 

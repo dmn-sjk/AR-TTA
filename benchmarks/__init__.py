@@ -1,6 +1,7 @@
 from .cladc import get_cladc_benchmark 
 from .cifar10c import get_cifar10c_benchmark
 from .shift import get_shift_benchmark
+from .imagenetc import get_imagenetc_benchmark
 
 
 def get_benchmark(cfg):
@@ -10,6 +11,8 @@ def get_benchmark(cfg):
         return get_cladc_benchmark(cfg)
     elif cfg['dataset'] == "shift":
         return get_shift_benchmark(cfg)
+    elif cfg['dataset'] == "imagenetc":
+        return get_imagenetc_benchmark(cfg)
     else:
         raise ValueError("Unknown benchmark name")
 
@@ -19,7 +22,7 @@ if __name__ == "__main__":
     import random
     import matplotlib.pyplot as plt
     # from continual_adaptation.constants.cifar import CORRUPTIONS
-    from constants.cifar import CORRUPTIONS
+    from constants.corrupted import CORRUPTIONS
     from utils.config_parser import ConfigParser
             
     def display_data(imgs, targets):
