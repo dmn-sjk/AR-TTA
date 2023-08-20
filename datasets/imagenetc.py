@@ -6,6 +6,7 @@ from torchvision.datasets import ImageNet
 import json
 from PIL import Image
 from torchvision.transforms.functional import pil_to_tensor
+from torchvision import transforms
 
 from constants.corrupted import SEVERITIES, CORRUPTIONS
 
@@ -16,11 +17,16 @@ class ImageNetCDataset(torch.utils.data.Dataset):
 
     def __init__(self, data_root: str, corruption: str = None, 
                  split: str = "test", severity: int = 5, 
-                 transforms: Callable =  None):
-        self.transforms = transforms
+                 transform: Callable =  None, img_size: int = 224):
+        self.transform = transform
         self.samples = []
         self.targets = []
         self.syn_to_class = {}
+    
+        self.resize_image = transforms.Compose([
+            transforms.Resize(256),
+            transforms.CenterCrop(img_size),
+        ])
         
         if split == "train" and corruption is not None: 
             raise ValueError("Train split of CIFAR10 is not corrupted")
@@ -67,11 +73,14 @@ class ImageNetCDataset(torch.utils.data.Dataset):
         
     def __getitem__(self, idx):
         x = Image.open(self.samples[idx]).convert("RGB")
+        
         x = pil_to_tensor(x)
     
         x = x.to(torch.float32)
         x /= 255.0
+        
+        x = self.resize_image(x)
 
-        if self.transforms:
-            x = self.transforms(x)
+        if self.transform:
+            x = self.transform(x)
         return x, self.targets[idx]

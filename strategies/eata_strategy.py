@@ -13,6 +13,7 @@ from strategies.adapt_turnoff_plugin import AdaptTurnoffPlugin
 from benchmarks.cifar10c import CIFAR10CDataset
 from benchmarks.shift import SHIFTClassificationDataset
 from shift_dev.types import WeathersCoarse, TimesOfDayCoarse
+from datasets.imagenetc import ImageNetCDataset
 from shift_dev.utils.backend import ZipBackend
 import clad
 
@@ -33,6 +34,9 @@ def get_eata_strategy(cfg, model: torch.nn.Module, eval_plugin: EvaluationPlugin
     elif cfg['dataset'] == 'clad':
         # TODO: for now val set has all the domains, maybe modify for only daytime and depending on the possibilities match the weather with train set 
         fisher_dataset = clad.get_cladc_val(cfg['data_root'], transform=None)
+    if cfg['dataset'] == 'imagenetc':
+        fisher_dataset = ImageNetCDataset(cfg['data_root'], corruption=None, split='val', transform=None,
+                                     img_size=cfg['img_size'])
     else:
         raise NotImplementedError
 
