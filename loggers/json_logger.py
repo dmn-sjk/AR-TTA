@@ -127,10 +127,9 @@ class JSONLogger(BaseLogger, SupervisedPlugin):
                 elif key.startswith("Top1_ClassAcc_Epoch"):
                     keys_to_remove.append(key)
                     # delete task id
-                    result_key = key[:-9]
-                    # add class id
-                    class_id = key.split('/')[-1]
-                    result_key += class_id
+                    key_splitted = key.split('/')
+                    del key_splitted[3]
+                    result_key = '/'.join(key_splitted)
                     self._append_results(result_key, val[1][0])
 
                     classes_not_logged_acc.remove(int(class_id))
