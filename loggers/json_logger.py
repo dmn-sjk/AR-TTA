@@ -131,7 +131,8 @@ class JSONLogger(BaseLogger, SupervisedPlugin):
                     del key_splitted[3]
                     result_key = '/'.join(key_splitted)
                     self._append_results(result_key, val[1][0])
-
+                    
+                    class_id = key_splitted[-1]
                     classes_not_logged_acc.remove(int(class_id))
                     
         for class_id in classes_not_logged_acc:
