@@ -370,6 +370,8 @@ def plot_per_class_acc(results, domains, args):
         
         per_class_means = []
         
+        per_class_accs_matrix = []
+        
         # while True, because of lack of information about class num
         while True:
             if result_key + str(class_id) not in results[method].keys():
@@ -384,13 +386,19 @@ def plot_per_class_acc(results, domains, args):
             accs = np.multiply(accs_array, np.full_like(accs_array, 100), where=accs_array!=None)
             ax.plot(range(len(accs)), accs, marker='.', label=class_id)
 
+            per_class_accs_matrix.append(list(accs))
             per_class_means.append(np.mean(accs[accs != None]))
 
             class_id += 1
-            
+
+        per_class_accs_matrix = np.array(per_class_accs_matrix)
+        per_class_accs_matrix[per_class_accs_matrix == None] = float('nan')
+        
         print(method)
         print(f"AMCA: {np.mean(per_class_means)}")
-        print(f"Min class accuracy: {np.min(per_class_means)}")
+        print(f"Min class-averaged accuracy: {np.nanmin(np.nanmean(per_class_accs_matrix, axis=0))}")
+        print(f"Min domain-averaged accuracy: {np.nanmin(np.nanmean(per_class_accs_matrix, axis=1))}")
+        print(f"Min class accuracy: {np.nanmin(per_class_accs_matrix)}")
         print('\n')
 
         ax.set_title(get_label(method))
