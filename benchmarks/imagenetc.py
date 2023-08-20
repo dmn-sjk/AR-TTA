@@ -24,7 +24,7 @@ def get_imagenetc_benchmark(cfg) -> GenericCLScenario:
     
     transforms_test = get_transforms(cfg, train=False)
 
-    val_sets.append(ImageNetCDataset(cfg['data_root'], corruption=None, split="val", transform=transforms_test,
+    val_sets.append(ImageNetCDataset(cfg['data_root'], corruption=None, split="val", transforms=transforms_test,
                                      img_size=cfg['img_size']))
     for corruption in corruptions:
         train_sets.append(ImageNetCDataset(cfg['data_root'], corruption=corruption, split="val", transform=transforms_test,
