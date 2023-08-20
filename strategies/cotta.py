@@ -146,7 +146,7 @@ class CoTTA(nn.Module):
         # Stochastic restore
         if True:
             for nm, m  in self.model.named_modules():
-                if 'model.' in nm:
+                if 'model.' in nm and 'model.' not in list(self.model_state.keys())[10]:
                     nm = nm.replace('model.', '')
                 for npp, p in m.named_parameters():
                     if npp in ['weight', 'bias'] and p.requires_grad:
