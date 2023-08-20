@@ -1,9 +1,9 @@
 lr: 0.00025
-fisher_alpha: 1
+fisher_alpha: 2000
 fisher_size: 2000
 # e_margin: 0.921034037 # 0.4 * ln(num_classes) (current value for cifar10)
 e_margin_coeff: 0.4
-d_margin: 0.4
+d_margin: 0.05
 fisher_clip_by_norm: 10
 nesterov: false
 optimizer: sgd
