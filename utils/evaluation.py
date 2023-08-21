@@ -107,12 +107,12 @@ def avg_per_seed_results(per_seed_results):
         results[result_key] = avg_per_seed([per_seed_results[seed][result_key] for seed in seeds])
     return results
 
-def generate_evaluation(results, domains_sequence, domains_sequence_idxs, source_domain_idx, num_classes, save_folder, eval_name=''):
+def generate_evaluation(results, domains_sequence, domains_sequence_idxs, source_domain_idx, num_classes, save_folder, eval_name = '',
+                        stds = None):
     table = [["class", *domains_sequence, "Avg. acc.", "Avg. mean class acc.", "Min mean class acc."], *[[] for i in range(num_classes + 1)]]
     
     if source_domain_idx is not None:
         table[0].extend(["Src. dom. avg acc.", "Src. dom. avg. mean class acc."])
-
 
     # /* per class results */
     all_class_accs_matrix = np.empty(shape=(num_classes, len(domains_sequence)))
@@ -146,6 +146,8 @@ def generate_evaluation(results, domains_sequence, domains_sequence_idxs, source
             table[class_id + 1].append('-')
 
     # /* all classes results */
+    main_results_all = {}
+
     # class column
     table[num_classes + 1].append('all')
 
@@ -160,20 +162,30 @@ def generate_evaluation(results, domains_sequence, domains_sequence_idxs, source
         flattened_batchwise_accs.extend(domain_batchwise_accs)
         
     # Avg acc column
-    table[num_classes + 1].append(np.mean(flattened_batchwise_accs))
+    avg_acc = np.mean(flattened_batchwise_accs)
+    table[num_classes + 1].append(avg_acc)
+    main_results_all['avg_acc'] = avg_acc
     
     # Avg mean class acc and Min class acc columns
     # first avg of classes then domains like AMCA in CLAD
     avg_class_accs_matrix = np.nanmean(all_class_accs_matrix, axis=0)
-    table[num_classes + 1].append(np.nanmean(avg_class_accs_matrix))
-    table[num_classes + 1].append(np.nanmin(avg_class_accs_matrix))
+    avg_mean_class_acc = np.nanmean(avg_class_accs_matrix)
+    min_mean_class_acc = np.nanmin(avg_class_accs_matrix)
+    table[num_classes + 1].append(avg_mean_class_acc)
+    table[num_classes + 1].append(min_mean_class_acc)
+    main_results_all['avg_mean_class_acc'] = avg_mean_class_acc
+    main_results_all['min_mean_class_acc'] = min_mean_class_acc
  
     if source_domain_idx is not None:
         source_domain_acc = results[batchwise_acc_key][source_domain_idx]
         # Source domain avg acc column
-        table[num_classes + 1].append(np.nanmean(source_domain_acc) * 100.0)
+        source_domain_avg_acc = np.nanmean(source_domain_acc) * 100.0
+        table[num_classes + 1].append(source_domain_avg_acc)
+        main_results_all['source_domain_avg_acc'] = source_domain_avg_acc
         # Source domain avg mean class acc column
-        table[num_classes + 1].append(np.nanmean(source_domain_per_class_accs))
+        source_domain_avg_mean_class_acc = np.nanmean(source_domain_per_class_accs)
+        table[num_classes + 1].append(source_domain_avg_mean_class_acc)
+        main_results_all['source_domain_avg_mean_class_acc'] = source_domain_avg_mean_class_acc
 
 
     # save table
@@ -185,14 +197,29 @@ def generate_evaluation(results, domains_sequence, domains_sequence_idxs, source
 
     # print table to std out in compact version
     table_compact_version = []
-    for row in table:
+
+    if stds is not None:
+        last_row_additonal_strs = []
+        for key in stds.keys():
+            last_row_additonal_strs.append(f" ({stds[key]:.2f})")
+        
+    for i, row in enumerate(table):
+        # last row
+        if i == len(table) - 1 and stds is not None:
+            for i in range(len(row) -  (1 + len(domains_sequence))):
+                col_idx = i + 1 + len(domains_sequence)
+                row[col_idx] = f"{row[col_idx]:.2f}{last_row_additonal_strs[i]}"
+
         table_compact_version.append([row[0], *row[1 + len(domains_sequence):]])
+        
     tab = PrettyTable(table_compact_version[0], float_format='.2', title=eval_name + 'evaluation results')
     tab.add_rows(table_compact_version[1:])
     print(tab)
     # save table
     with open(os.path.join(save_folder, 'evaluation.txt'), 'w') as f:
         f.write(str(tab))
+    
+    return main_results_all
 
 def evaluate_results(cfg):
     experiment_name = get_experiment_name(cfg)
@@ -214,12 +241,16 @@ def evaluate_results(cfg):
 
     domains_sequence_idxs = list(range(len(per_seed_domains_sequence[list(per_seed_domains_sequence.keys())[0]])))
 
+    main_results_all = {'avg_acc': [], 'avg_mean_class_acc': [], 'min_mean_class_acc': [], 
+                        'source_domain_avg_acc': [], 'source_domain_avg_mean_class_acc': []}
     for (seed, seed_results), seed_path in zip(per_seed_results.items(), per_seed_paths.values()):
-        generate_evaluation(seed_results, 
-                            per_seed_domains_sequence[seed], 
-                            domains_sequence_idxs, 
-                            source_domain_idx, 
-                            cfg['num_classes'], save_folder=seed_path, eval_name=seed + ' ')
+        main_results_all_seed = generate_evaluation(seed_results,
+                                                    per_seed_domains_sequence[seed],
+                                                    domains_sequence_idxs,
+                                                    source_domain_idx,
+                                                    cfg['num_classes'], save_folder=seed_path, eval_name=seed + ' ')
+        for key in main_results_all_seed.keys():
+            main_results_all[key].append(main_results_all_seed[key])
 
     if len(per_seed_paths) > 1:
         if 'long_random' in cfg['benchmark']:
@@ -244,5 +275,10 @@ def evaluate_results(cfg):
                 np.nanmean([result["Top1_Acc_MB/train_phase/train_stream"][random_domain][random_batch]
                         for result in per_seed_results.values()]), "Something is wrong with seed-averaging results"
 
+        stds = {}
+        for key in main_results_all.keys():
+            stds[key] = np.std(main_results_all[key])
+
         generate_evaluation(results, domains_sequence, domains_sequence_idxs, source_domain_idx, 
-                            cfg['num_classes'], save_folder=experiment_folder, eval_name='seed-averaged ')
+                            cfg['num_classes'], save_folder=experiment_folder, eval_name='seed-averaged ',
+                            stds=stds)
