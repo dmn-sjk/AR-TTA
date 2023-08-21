@@ -7,6 +7,7 @@ import numpy as np
 from strategies import custom
 from strategies.frozen_strategy import FrozenModel
 from benchmarks.cifar10c import CIFAR10CDataset
+from benchmarks.imagenetc import ImageNetCDataset
 from benchmarks.shift import SHIFTClassificationDataset
 from shift_dev.types import WeathersCoarse, TimesOfDayCoarse
 from shift_dev.utils.backend import ZipBackend
@@ -139,6 +140,9 @@ def get_custom_strategy(cfg, model: torch.nn.Module, eval_plugin: EvaluationPlug
             # TODO: for now val set has all the domains, maybe modify for only daytime and depending on the possibilities match the weather with train set 
             train_dataset = clad.get_cladc_train(cfg['data_root'], transform=None, sequence_type='source',
                                                  img_size=cfg['img_size'])[0]
+        elif cfg['dataset'] == 'imagenetc':
+            train_dataset = ImageNetCDataset(cfg['data_root'], corruption=None, split="train", transform=None,
+                                     img_size=cfg['img_size'])
         else:
             raise NotImplementedError
 
