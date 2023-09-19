@@ -1,1 +1,1 @@
-# AR-TTA: A Simple Method for Real-World\\ Continual Test-Time Adaptation
+# AR-TTA: A Simple Method for Real-World Continual Test-Time Adaptation
