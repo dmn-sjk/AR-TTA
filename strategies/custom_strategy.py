@@ -168,6 +168,12 @@ def get_custom_strategy(cfg, model: torch.nn.Module, eval_plugin: EvaluationPlug
                 # train_dataset[idx][0] - single sample image, adding dimension with None 
                 memory['x'] = torch.cat((memory['x'], train_dataset[idx][0][None,:]), dim=0)
                 memory['labels'] = torch.cat((memory['labels'], torch.LongTensor([train_dataset[idx][1]])), dim=0)
+                
+        # random memory
+        # chosen_idxs = np.random.randint(low=0, high=len(train_dataset.targets), size=(cfg['memory_size'],))
+        # for idx in chosen_idxs:
+        #     memory['x'] = torch.cat((memory['x'], train_dataset[idx][0][None,:]), dim=0)
+        #     memory['labels'] = torch.cat((memory['labels'], torch.LongTensor([train_dataset[idx][1]])), dim=0)
             
         random_order_idxs = torch.randperm(len(memory['labels']))
         memory['x'] = memory['x'][random_order_idxs]
@@ -179,7 +185,9 @@ def get_custom_strategy(cfg, model: torch.nn.Module, eval_plugin: EvaluationPlug
                        distillation_out_temp=cfg['distillation_out_temp'],
                        features_distillation_weight=cfg['features_distillation_weight'],
                        memory=memory,
-                       num_replay_samples=cfg['num_replay_samples'])
+                       num_replay_samples=cfg['num_replay_samples'],
+                       alpha=cfg['alpha'],
+                       beta=cfg['beta'])
 
     plugins.append(AdaptTurnoffPlugin())
 

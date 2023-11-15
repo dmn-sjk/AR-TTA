@@ -11,11 +11,15 @@ from utils.transforms import get_transforms
 from constants.corrupted import LONG_DOMAINS_SEQ, REPETITIVE_DOMAINS_SEQ, STANDARD_DOMAINS_SEQ
 from datasets.imagenetc import ImageNetCDataset
 
+from robustbench.data import load_imagenetc, load_imagenet
+import torch
+import os
+
 
 def get_imagenetc_benchmark(cfg) -> GenericCLScenario:
     train_sets = []
     val_sets = []
-    if cfg['benchmark'] in ["imagenetc_standard"]:
+    if cfg['benchmark'] in ["imagenetc_standard", "imagenetc_standard_subset"]:
         corruptions = copy(STANDARD_DOMAINS_SEQ)
     else:
         raise ValueError("Unknown type of cifar benchmark")
@@ -24,15 +28,31 @@ def get_imagenetc_benchmark(cfg) -> GenericCLScenario:
     
     transforms_test = get_transforms(cfg, train=False)
 
-    val_sets.append(ImageNetCDataset(cfg['data_root'], corruption=None, split="val", transforms=transforms_test,
-                                     img_size=cfg['img_size']))
+    # val_sets.append(ImageNetCDataset(cfg['data_root'], corruption=None, split="val", transform=transforms_test,
+    #                                  img_size=cfg['img_size']))
+            
     for corruption in corruptions:
-        train_sets.append(ImageNetCDataset(cfg['data_root'], corruption=corruption, split="val", transform=transforms_test,
-                                     img_size=cfg['img_size']))        
+        if 'subset' in cfg['benchmark']:
+            x, y = load_imagenetc(n_examples=5000, 
+                                  severity=5, 
+                                  data_dir=cfg['data_root'], 
+                                  shuffle=False,
+                                  corruptions=[corruption])
+            
+            imagenetc_dataset = torch.utils.data.TensorDataset(x,y)
+            train_sets.append(imagenetc_dataset)
+        else:
+            train_sets.append(ImageNetCDataset(cfg['data_root'], corruption=corruption, split="val", transform=transforms_test,
+                                        img_size=cfg['img_size']))      
 
     if cfg['end_with_source_domain']:
-        train_sets.append(ImageNetCDataset(cfg['data_root'], corruption=None, split="val", transform=transforms_test,
-                                     img_size=cfg['img_size']))
+        if 'subset' in cfg['benchmark']:
+            x, y = load_imagenet(n_examples=50, data_dir=os.path.join(cfg['data_root'], 'ImageNet/ILSVRC/Data/CLS-LOC'))
+            imagenetc_dataset = torch.utils.data.TensorDataset(x,y)
+            train_sets.append(imagenetc_dataset)
+        else:
+            train_sets.append(ImageNetCDataset(cfg['data_root'], corruption=None, split="val", transform=transforms_test,
+                                        img_size=cfg['img_size']))
         cfg['domains'].append('clear')
 
     # transform_groups = dict(

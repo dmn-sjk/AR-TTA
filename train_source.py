@@ -9,6 +9,9 @@ from tqdm import tqdm
 from robustbench.utils import load_model
 from sklearn.metrics import f1_score
 import timm
+import pickle
+from copy import deepcopy
+import numpy as np
 
 
 from utils.transforms import get_transforms
@@ -27,7 +30,7 @@ def main():
     cfg['device'] = torch.device(f"cuda:{cfg['cuda']}"
                                  if torch.cuda.is_available() and cfg['cuda'] >= 0
                                  else "cpu")
-    
+
     if 'seeds' in cfg.keys():
         if len(cfg['seeds']) > 1:
             raise NotImplementedError("Only single seed per source training supported for now")
@@ -48,8 +51,22 @@ def main():
         val_set = CIFAR10CDataset(cfg['data_root'], corruption=None, split='test', transforms=val_transform)
     elif cfg['dataset'] == 'clad':
         train_set = clad.get_cladc_train(cfg['data_root'], transform=train_transform, img_size=cfg['img_size'], sequence_type='source')[0]
-        # TODO: for now val set has all the domains, maybe modify for only daytime and depending on the possibilities match the weather with train set 
-        val_set = clad.get_cladc_val(cfg['data_root'], transform=val_transform, img_size=cfg['img_size'])
+        
+        with open("datasets/clad_val_idxs.pkl", "rb") as f: 
+            val_idxs = pickle.load(f)
+
+        val_set = deepcopy(train_set)
+        val_set.ids = list(np.array(val_set.ids)[val_idxs])
+        
+        train_mask = np.ones(len(train_set.ids), dtype=bool)
+        train_mask[val_idxs] = False
+        train_set.ids = list(np.array(train_set.ids)[train_mask])
+
+        assert len(train_set.ids) == 4157
+        assert len(val_set.ids) == 1000
+        
+        # # TODO: for now val set has all the domains, maybe modify for only daytime and depending on the possibilities match the weather with train set 
+        # val_set = clad.get_cladc_val(cfg['data_root'], transform=val_transform, img_size=cfg['img_size'])
     else:
         raise ValueError(f"Unknown dataset: {cfg['dataset']}")
     

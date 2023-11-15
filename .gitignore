@@ -9,3 +9,5 @@ source_dirs.sh
 results
 notebooks
 .ipynb_checkpoints
+wandb/*
+*.pdf

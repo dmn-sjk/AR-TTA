@@ -22,6 +22,7 @@ def get_strategy(cfg):
         model = torchvision.models.resnet18(weights=torchvision.models.ResNet18_Weights.DEFAULT)
     elif cfg['model'] == 'resnet50':
         if cfg['dataset'] == 'imagenetc':
+            # model = torchvision.models.resnet50(weights=torchvision.models.ResNet50_Weights.DEFAULT)
             model = load_model('Standard_R50', cfg['model_ckpt_dir'],
                             'imagenet', "corruptions")
         else:

@@ -84,6 +84,10 @@ class DynamicBN(BatchNorm2d):
             dist = self.dist_metric(batch_mean, batch_var,
                                         self.running_mean, self.running_var, 
                                         eps=1e-3)  # self.eps) Small eps can reduce the sensitivity to unstable small variance.
+            # dist = self.dist_metric(batch_mean, batch_var,
+            #                             self.saved_running_mean.to(batch_mean.device), 
+            #                             self.saved_running_var.to(batch_mean.device), 
+            #                             eps=1e-3)  # self.eps) Small eps can reduce the sensitivity to unstable small variance.
             new_beta = 1. - torch.exp(- self.bn_dist_scale * dist.mean())
 
             # ema beta

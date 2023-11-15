@@ -14,6 +14,7 @@ import numpy as np
 import utils.cotta_transforms as my_transforms
 from utils.intermediate_features import IntermediateFeaturesGetter
 from utils.utils import split_up_model
+from utils.dynamic_bn import DynamicBN, count_bn, replace_bn
 
 
 def get_tta_transforms(gaussian_std: float=0.005, soft=False, clip_inputs=False, img_size: int=64):
@@ -60,7 +61,8 @@ def update_ema_variables(ema_model, model, alpha_teacher):
 class Custom(nn.Module):
     def __init__(self, model, optimizer, cfg: dict, steps=1, img_size: int = 64,
                  distillation_out_temp: int = 1, features_distillation_weight: float = 1,
-                 memory: dict = None, num_replay_samples: int = 10):
+                 memory: dict = None, num_replay_samples: int = 10,
+                 alpha: float = 0.4, beta: float = 0.4):
         super().__init__()
         
         self.model = model
@@ -74,6 +76,9 @@ class Custom(nn.Module):
         self.num_samples_update = 0
         self.current_model_probs = None
         assert steps > 0, "custom requires >= 1 step(s) to forward and update"
+        
+        self.alpha = alpha
+        self.beta = beta
         
         self.model_state, self.optimizer_state, self.model_ema, self.model_source = \
             copy_model_and_optimizer(self.model, self.optimizer)
@@ -192,8 +197,7 @@ class Custom(nn.Module):
             
             replay_x = self.memory['x'][random_order_idxs].to(self.cfg['device'])
             if self.cfg['replay_augs'] == 'mixup_from_memory':
-                alpha = 0.4
-                lam = np.random.beta(alpha, alpha)
+                lam = np.random.beta(self.alpha, self.beta)
                 mixupped_x = lam * x_for_model_update + (1 - lam) * replay_x
 
                 x_for_model_update = mixupped_x
@@ -203,8 +207,7 @@ class Custom(nn.Module):
                 x_for_model_update = torch.cat((x_for_model_update, replay_x), dim=0)
 
             elif self.cfg['replay_augs'] == 'mixup_within_memory':
-                alpha = 0.4
-                lam = np.random.beta(alpha, alpha)
+                lam = np.random.beta(self.alpha, self.beta)
                 random_idxs = torch.randperm(x_for_model_update.shape[0])
                 replay_x = lam * replay_x + (1 - lam) * replay_x[random_idxs]
 
@@ -343,9 +346,10 @@ def configure_model(model, params_for_update: list = None, num_first_blocks_for_
 
     if num_first_blocks_for_update == 0 and params_for_update is not None:
         return model
-    
+
     # enable all trainable
     # first module is the whole network
+    i=0
     for module_name, module in list(model.named_modules())[1:]:
         if num_first_blocks_for_update != -1 and \
             ('layer' in module_name or 'block' in module_name):
@@ -353,6 +357,34 @@ def configure_model(model, params_for_update: list = None, num_first_blocks_for_
             block_nr = int(re.search(r'\d+$', starting_string).group())
             if block_nr > num_first_blocks_for_update:
                 break
+            
+        # if i == 0 \
+            # or 'block1' in module_name:
+            # or 'block2' in module_name:
+            # or 'block3' in module_name:
+            # if isinstance(module, nn.BatchNorm2d) or isinstance(module, DynamicBN):
+        # if 'fc' in module_name \
+        #     or 'block3' in module_name:
+        # if 'block2' in module_name:
+            # or 'block1' in module_name:
+            # if isinstance(module, nn.BatchNorm2d) or isinstance(module, DynamicBN):
+            # module.requires_grad_(True)
+        
+        # if i < 4 \
+        #     or 'layer1' in module_name:
+        #     # or 'layer2' in module_name:
+        #         if isinstance(module, nn.BatchNorm2d) or isinstance(module, DynamicBN):
+        #             module.requires_grad_(True)
+        
+        # if 'fc' in module_name \
+        #     or 'layer4' in module_name:
+        #     # or 'layer3' in module_name:
+        #         if isinstance(module, nn.BatchNorm2d) or isinstance(module, DynamicBN):
+        #             module.requires_grad_(True)
+        
+        # print(i)
+        # i+=1
+        # print(module_name + '\n')
 
         if params_for_update is not None:
             for param_name, param in module.named_parameters():
@@ -362,10 +394,10 @@ def configure_model(model, params_for_update: list = None, num_first_blocks_for_
             module.requires_grad_(True)
 
         # if isinstance(module, nn.BatchNorm2d):
-            # force use of batch stats in train and eval modes
-            # module.track_running_stats = False
-            # module.running_mean = None
-            # module.running_var = None
+        #     # force use of batch stats in train and eval modes
+        #     module.track_running_stats = False
+        #     module.running_mean = None
+        #     module.running_var = None
 
     return model
 

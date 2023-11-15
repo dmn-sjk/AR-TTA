@@ -64,8 +64,9 @@ class ConfigParser:
                             help='Name of the run')
         if self.mode == 'tta':
             parser.add_argument('--benchmark', type=str, default=None, required=True,
-                                help='cifar10c_long | cifar10c_repetitive | cifar10c_standard | cifar10c_random | cifar10c_long_random | clad | clad_random | clad_long_random | \
-                                    shift_weather | shift_timeofday | shift_mix | shift_mix_no_source | shift_mix_long_random | shift_mix_random')
+                                help='cifar10c_long | cifar10c_repetitive | cifar10c_standard | cifar10c_random | cifar10c_long_random | \
+                                clad | clad_random | clad_long_random | shift_weather | shift_timeofday | shift_mix | shift_mix_no_source | \
+                                    shift_mix_long_random | shift_mix_random | imagenetc_standard | imagenetc_standard_subset')
             parser.add_argument('--method', type=str, default=None, required=True,
                                 help='frozen | finetune | tent | cotta | eata | sar | custom | bn_stats_adapt')
         parser.add_argument('--model', type=str, default=argparse.SUPPRESS,
@@ -98,6 +99,10 @@ class ConfigParser:
                             help="Beta for stats ema")
         parser.add_argument('--bn_dist_scale', type=float, default=argparse.SUPPRESS,
                             help="Scale for distributions distance in MectaBN")
+        parser.add_argument('--alpha', type=float, default=argparse.SUPPRESS,
+                            help="For beta distrib")
+        parser.add_argument('--beta', type=float, default=argparse.SUPPRESS,
+                            help="For beta distrib")
         parser.add_argument('--smoothing_beta', type=float, default=argparse.SUPPRESS,
                             help="Coeff for ema beta")
         parser.add_argument('--distillation_out_temp', type=int, default=argparse.SUPPRESS,
