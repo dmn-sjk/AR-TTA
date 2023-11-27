@@ -33,3 +33,6 @@ sampling_method: null # null | stochastic_entropy | random | eata | eata_weight 
 bn_dist_scale: 10
 init_beta: 0.1
 smoothing_beta: 0.2
+
+alpha: 0.4
+beta: 0.4

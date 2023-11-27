@@ -5,6 +5,7 @@ from utils.config_parser import ConfigParser
 from benchmarks import get_benchmark
 from strategies import get_strategy
 from utils.evaluation import evaluate_results
+import wandb
 
 
 def main():
@@ -54,8 +55,24 @@ def main():
         strategy = get_strategy(cfg)
 
         if cfg['save_results']:
-            cfg['git_commit'] = get_git_revision_hash()
+            # cfg['git_commit'] = get_git_revision_hash()
             save_config(cfg, experiment_name)
+
+        if 'wandb' in cfg.keys() and cfg['wandb']:
+            if wandb.run is not None:
+                wandb.finish()
+            
+            job_type = f"{cfg['method']}_{cfg['model']}_{cfg['run_name']}"
+            # Wandb's 64 letters limit
+            if len(job_type) > 64:
+                job_type = job_type[:64]
+            wandb.init(project=cfg['project_name'],
+                name='seed' + str(seed),
+                job_type=job_type,
+                group=cfg['dataset'] + '_TTA',
+                config=cfg,
+                resume="allow")
+
 
         for i, experience in enumerate(experience_generator(benchmark.train_stream, 
                                                         domains=cfg['domains'],

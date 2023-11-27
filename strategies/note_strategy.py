@@ -6,7 +6,7 @@ from typing import Sequence
 from strategies.adapt_turnoff_plugin import AdaptTurnoffPlugin
 from strategies.frozen_strategy import FrozenModel
 from strategies import note
-from utils import iabn
+from custom_bns import iabn
 
 def get_note_strategy(cfg, model: torch.nn.Module, eval_plugin: EvaluationPlugin, plugins: Sequence):
     iabn.convert_iabn(model, k=cfg['iabn_k'])

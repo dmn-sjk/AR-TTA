@@ -12,7 +12,10 @@ from benchmarks.shift import SHIFTClassificationDataset
 from shift_dev.types import WeathersCoarse, TimesOfDayCoarse
 from shift_dev.utils.backend import ZipBackend
 import clad
-from utils.dynamic_bn import DynamicBN, count_bn, replace_bn
+from custom_bns.dynamic_bn import DynamicBN
+from custom_bns.mecta_bn import MectaBN
+# from custom_bns.old_dynamic_bn import DynamicBN
+from custom_bns.utils import replace_bn, count_bn
 
 
 
@@ -92,19 +95,21 @@ def get_custom_strategy(cfg, model: torch.nn.Module, eval_plugin: EvaluationPlug
                 params_for_update.append(param_name)
 
     # /* dynamic BN
-    n_repalced = replace_bn(model, cfg['model'],
-                   beta=cfg['init_beta'],
-                   bn_dist_scale=cfg['bn_dist_scale'],
-                   smoothing_beta=cfg['smoothing_beta'],
+    BN_to_inject = DynamicBN
+    
+    n_bn = count_bn(model, torch.nn.BatchNorm2d)
+    n_bn_to_replace = int(n_bn * 1.0)
+    
+    n_repalced = replace_bn(model, BN_to_inject,
+                            number_to_replace=n_bn_to_replace,
+                            beta=cfg['init_beta'],
+                            bn_dist_scale=cfg['bn_dist_scale'],
+                            smoothing_beta=cfg['smoothing_beta'],
                    )
-    n_bn = count_bn(model)
-    assert n_repalced == n_bn, f"Replaced {n_repalced} BNs but actually have {n_bn}. Need to update `replace_bn`."
+    assert n_repalced == n_bn_to_replace, f"Replaced {n_repalced} BNs but you wanted to replace {n_bn_to_replace}. Need to update `replace_bn`."
 
-    m_cnt = 0
-    for m in model.modules():
-        if isinstance(m, DynamicBN):
-            m_cnt += 1
-    assert n_repalced == m_cnt, f"Replaced {n_repalced} BNs but actually inserted {m_cnt} AccumBN."
+    n_bn_inside = count_bn(model, BN_to_inject)
+    assert n_repalced == n_bn_inside, f"Replaced {n_repalced} BNs but actually inserted {n_bn_inside} {BN_to_inject.__name__}."
     # dynamic BN */
 
     model = custom.configure_model(model, 

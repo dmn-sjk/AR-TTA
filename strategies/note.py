@@ -1,7 +1,8 @@
 from torch import nn
 import torch
 
-from utils import InstanceAwareBatchNorm2d, InstanceAwareBatchNorm1d, PBRS
+from utils import PBRS
+from custom_bns.iabn import InstanceAwareBatchNorm1d, InstanceAwareBatchNorm2d
 
 
 class NOTE(nn.Module):

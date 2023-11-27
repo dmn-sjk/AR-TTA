@@ -4,6 +4,7 @@ import torch
 import os
 import json
 import sys
+import wandb
 
 from avalanche.evaluation.metric_results import MetricValue
 from avalanche.logging import BaseLogger
@@ -37,7 +38,7 @@ class JSONLogger(BaseLogger, SupervisedPlugin):
     # (results dict is kept in RAM and the whole log file gets updated,
     # since there is no easy way to append values to the array inside json)
 
-    def __init__(self, num_classes: int, log_file: TextIO = sys.stdout):
+    def __init__(self, num_classes: int, log_file: TextIO = sys.stdout, wandb: bool = False):
         """Creates an instance of `JSONLogger` class.
 
         :param log_file_path: path to results json file, including file name.
@@ -51,6 +52,9 @@ class JSONLogger(BaseLogger, SupervisedPlugin):
 
         self.per_class_predictions = torch.zeros(size=(num_classes,))
         self.per_class_samples = torch.zeros(size=(num_classes,))
+        
+        self.wandb = wandb
+        self.step = 0
         
     def _update_json_file(self):
         self.log_file.seek(0)  # rewind
@@ -79,6 +83,13 @@ class JSONLogger(BaseLogger, SupervisedPlugin):
         # current models outputs
         outputs = strategy.mb_output
         preds = torch.argmax(outputs, dim=-1)
+
+        if self.wandb:
+            _, labels, _ = strategy.mbatch
+            acc = (preds == labels).float().sum() / len(labels)
+            wandb.log({f'MB_Acc': acc}, step=self.step)
+            self.step += 1
+        
         self.per_class_predictions += torch.bincount(preds.detach().cpu(), minlength=self.num_classes)
         self.per_class_samples += torch.bincount(strategy.mb_y.detach().cpu(), minlength=self.num_classes)
 
