@@ -3,7 +3,7 @@ from torch import nn
 
 
 def replace_bn(model: nn.Module, BN_module: nn.Module, n_repalced=0, number_to_replace=None, **abn_kwargs):
-    copy_keys = ['eps', 'momentum', 'affine', 'track_running_stats']
+    copy_keys = ['eps', 'momentum', 'affine']
 
     for mod_name, target_mod in model.named_children():
         # print(mod_name)
@@ -22,6 +22,7 @@ def replace_bn(model: nn.Module, BN_module: nn.Module, n_repalced=0, number_to_r
                 **abn_kwargs,
             )
             new_mod.load_state_dict(target_mod.state_dict())
+            new_mod.track_running_stats = False
             setattr(model, mod_name, new_mod)
         else:
             n_repalced = replace_bn(
