@@ -6,6 +6,7 @@ import numpy as np
 from prettytable import PrettyTable
 from collections.abc import Iterable
 from numbers import Number
+import wandb
 
 from utils.utils import get_experiment_folder, get_experiment_name
 
@@ -29,7 +30,7 @@ def load_per_seed_results(experiment_name, experiment_folder, cfg):
         results_path = os.path.join(experiment_folder, experiment_name + '_results.json')
         if os.path.exists(results_path):
             print("No per seed results, using results with single seed from main experiment directory!")
-            key = 'seed' + str(cfg['seed'])
+            key = 'seed' + str(cfg['curr_seed'])
             per_seed_paths[key] = experiment_folder
             with open(results_path, 'r') as f:
                 per_seed_results[key] = json.load(f)
@@ -249,6 +250,11 @@ def evaluate_results(cfg):
                                                     domains_sequence_idxs,
                                                     source_domain_idx,
                                                     cfg['num_classes'], save_folder=seed_path, eval_name=seed + ' ')
+        
+        if 'seed' + str(cfg['curr_seed']) == seed and cfg['wandb']:
+            wandb.run.summary["avg_acc"] = main_results_all_seed['avg_acc']
+            wandb.run.summary["avg_mean_class_acc"] = main_results_all_seed['avg_mean_class_acc']
+        
         for key in main_results_all_seed.keys():
             main_results_all[key].append(main_results_all_seed[key])
 

@@ -11,3 +11,4 @@ notebooks
 .ipynb_checkpoints
 wandb/*
 *.pdf
+experiment_data/*
