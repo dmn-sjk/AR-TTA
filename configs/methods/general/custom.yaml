@@ -36,3 +36,5 @@ smoothing_beta: 0.2
 
 alpha: 0.4
 beta: 0.4
+
+bn_stats: dynamicbn

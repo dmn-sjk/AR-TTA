@@ -16,6 +16,7 @@ import utils.cotta_transforms as my_transforms
 from utils.utils import split_up_model
 from custom_bns.mecta_bn import MectaBN
 from custom_bns.dynamic_bn import DynamicBN
+from custom_bns.AdaMixBN import AdaMixBN
 
 
 def update_ema_variables(ema_model, model, alpha_teacher):
@@ -43,10 +44,19 @@ class EmaTeacher(nn.Module):
         self.model_state, self.optimizer_state, self.model_ema, self.model_source = \
             copy_model_and_optimizer(self.model, self.optimizer)
             
+        # for mod_name, module in self.model.named_modules():
+        #     if isinstance(module, MectaBN) or isinstance(module, DynamicBN):
+        #         module.adapt_bn_stats = False
+                # module.track_running_stats = False
+                # module.running_mean = None
+                # module.running_var = None
+                
         self.adapt = True
         self.distillation_out_temp = distillation_out_temp
         
         self.step = 0
+        
+        # self.encoder, self.classifier = split_up_model(self.model, self.cfg['model'], encoder_out_relu_to_classifier=False)
 
     def forward(self, x):
         if self.adapt:
@@ -71,22 +81,45 @@ class EmaTeacher(nn.Module):
 
     @torch.enable_grad()  # ensure grads in possible no grad context for testing
     def forward_and_adapt(self, x, model, optimizer):
-        x, labels, _ = x
-        
-        labels = torch.nn.functional.one_hot(labels, num_classes=self.cfg['num_classes'])\
-                .to(torch.float32)\
-                .to(self.cfg['device'])
+        if isinstance(x, list):
+            x, labels, _ = x
+            
+            labels = torch.nn.functional.one_hot(labels, num_classes=self.cfg['num_classes'])\
+                    .to(torch.float32)\
+                    .to(self.cfg['device'])
 
         ema_outputs = self.model_ema(x)
         student_outputs = self.model(x)
+        # feats = self.encoder(x) 
+        # student_outputs = self.classifier(feats) 
+                
+        pseudo_labels = ema_outputs.clone().detach()
+
+        entropies = softmax_entropy(student_outputs / self.distillation_out_temp, pseudo_labels / self.distillation_out_temp, True)
+        # entropies = softmax_entropy(student_outputs / self.distillation_out_temp, student_outputs / self.distillation_out_temp, True)
+        # entropies = softmax_entropy(student_outputs / self.distillation_out_temp, labels / self.distillation_out_temp, False)
+        
+        loss = entropies.mean(0)
+
+        loss.backward()
+        
         
         # /* STATS DIST VISUALIZATION
         if 'wandb' in self.cfg.keys() and self.cfg['wandb']:
             i = 0
             # dist_source_test, dist_test_used, dist_source_used = 0, 0, 0
             for mod_name, module in self.model.named_modules():
-                if isinstance(module, DynamicBN):
-                    wandb.log({f"BN{i}_beta": module.beta}, step=self.step)
+                if isinstance(module, DynamicBN) or isinstance(module, MectaBN):
+                    if isinstance(module.beta, torch.nn.Parameter):
+                        beta = module.beta.item()
+                        grad = module.beta.grad
+                    else:
+                        beta = module.beta
+                        grad = None
+                    
+                    wandb.log({f"BN{i}_beta": beta}, step=self.step)
+                    if grad is not None:
+                        wandb.log({f"BN{i}_betaGradient": grad}, step=self.step)
                     # dist_source_test += gauss_symm_kl_divergence(module.test_mean.cuda(), module.test_var.cuda(),
                     #                     module.saved_running_mean.cuda(), module.saved_running_var.cuda(), 
                     #                     eps=1e-3).mean()
@@ -109,19 +142,29 @@ class EmaTeacher(nn.Module):
             self.step += 1
         
         # STATS DIST VISUALIZATION */
-                
-        pseudo_labels = ema_outputs.detach().clone()
-
-        entropies = softmax_entropy(student_outputs / self.distillation_out_temp, pseudo_labels / self.distillation_out_temp, True)
-        # entropies = softmax_entropy(student_outputs / self.distillation_out_temp, labels / self.distillation_out_temp, False)
         
-        loss = entropies.mean(0)
-
-        loss.backward()
+        
         optimizer.step()
         optimizer.zero_grad()
 
+
+        # with torch.no_grad():
+        #     student_outputs = self.model(x)
+        #     optimizer.zero_grad()
+
         self.model_ema = update_ema_variables(ema_model = self.model_ema, model = self.model, alpha_teacher=self.cfg['mt'])
+        
+        # for m in self.model.modules():
+        #     if isinstance(m, AdaMixBN):
+        #         m.reset()
+                
+        # for ema_m, student_m in zip(self.model_ema.modules(), self.model.modules()):
+        #     if isinstance(ema_m, nn.BatchNorm2d):
+        #         student_m.running_mean.data = ema_m.running_mean.data.clone()
+        #         student_m.running_var.data = ema_m.running_var.data.clone()
+                # ema_m.running_mean.data = student_m.running_mean.data.clone()
+                # ema_m.running_var.data = student_m.running_var.data.clone()
+        
         return ema_outputs
 
 
@@ -146,7 +189,6 @@ def collect_params(model):
             for np, p in m.named_parameters():
                 if np in ['weight', 'bias', 'beta'] and p.requires_grad:
                     params.append(p)
-                    print(f"{nm}.{np}")
                     names.append(f"{nm}.{np}")
     return params, names
 
@@ -223,16 +265,17 @@ def configure_model(model, params_for_update: list = None, num_first_blocks_for_
                 if f"{module_name}.{param_name}" in params_for_update:
                     param.requires_grad_(True)
         else:
-            # if isinstance(module, DynamicBN):
+            # if isinstance(module, DynamicBN) or isinstance(module, MectaBN):
             #     module.beta.requires_grad_(True)
             module.requires_grad_(True)
-
-        # if isinstance(module, nn.BatchNorm2d) and not isinstance(module, MectaBN):
-        # #     # force use of batch stats in train and eval modes
-        #     print("BN")
-        #     module.track_running_stats = False
-        #     module.running_mean = None
-        #     module.running_var = None
+            
+            # if isinstance(module, nn.BatchNorm2d) and not isinstance(module, MectaBN):
+            # #     # force use of batch stats in train and eval modes
+            #     print("BN stats reset")
+            #     module.requires_grad_(True)
+            #     module.track_running_stats = False
+            #     module.running_mean = None
+            #     module.running_var = None
 
     return model
 

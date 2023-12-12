@@ -74,12 +74,28 @@ def get_git_revision_hash() -> str:
     return subprocess.check_output(['git', 'rev-parse', 'HEAD']).decode('ascii').strip()
 
 
-def split_up_model(model, model_name):
+def split_up_model(model, model_name, encoder_out_relu_to_classifier=False):
+    """
+    encoder_out_relu_to_classifier: encoder has relu activation at the end, if this argument is True
+        this relu is moved to classifier (works for wideresnet only now)
+        TODO: check sensibility of doing that for resnet since it has relu on output inside one of the bottlenecks
+    """
+    if encoder_out_relu_to_classifier and 'wideresnet' not in model_name:
+        raise NotImplementedError()
+    
     if 'wideresnet' in model_name: 
-        encoder = nn.Sequential(*list(model.children())[:-1], nn.AvgPool2d(kernel_size=8, stride=8), nn.Flatten())
+        if encoder_out_relu_to_classifier:
+            encoder = nn.Sequential(*list(model.children())[:-2], nn.AvgPool2d(kernel_size=8, stride=8), nn.Flatten())
+        else:
+            encoder = nn.Sequential(*list(model.children())[:-1], nn.AvgPool2d(kernel_size=8, stride=8), nn.Flatten())
     elif 'resnet' in model_name:
         encoder = nn.Sequential(*list(model.children())[:-1], nn.Flatten())
-    classifier = model.fc
+        
+    if encoder_out_relu_to_classifier and 'wideresnet' in model_name:
+        classifier = nn.Sequential(list(model.children())[-2], model.fc)
+    else:
+        classifier = model.fc
+
     return encoder, classifier
 
 def save_config(cfg, experiment_name):

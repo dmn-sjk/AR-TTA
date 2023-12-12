@@ -5,3 +5,5 @@ optimizer: adam
 weight_decay: 0.
 
 memory_size: 10
+
+bn_stats: iabn

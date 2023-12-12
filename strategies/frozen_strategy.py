@@ -12,6 +12,7 @@ from avalanche.training.templates.base import _group_experiences_by_stream
 from avalanche.benchmarks import CLExperience, CLStream
 from typing import Iterable, Sequence, Optional, Union, List
 from avalanche.training.templates.observation_type import OnlineObservation
+from avalanche.models.dynamic_modules import MultiTaskModule
 
 ExpSequence = Iterable[CLExperience]
 
@@ -182,3 +183,13 @@ class FrozenModel(SupervisedTemplate):
             # self._after_update(**kwargs)
 
             self._after_training_iteration(**kwargs)
+            
+    def forward(self):
+        """Compute the model's output given the current mini-batch."""
+        return avalanche_forward(self.model, self.mbatch, self.mb_task_id)
+    
+def avalanche_forward(model, x, task_labels):
+    if isinstance(model, MultiTaskModule):
+        return model(x, task_labels)
+    else:  # no task labels
+        return model(x)

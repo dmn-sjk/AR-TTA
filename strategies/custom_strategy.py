@@ -116,7 +116,7 @@ def get_custom_strategy(cfg, model: torch.nn.Module, eval_plugin: EvaluationPlug
                                    params_for_update=params_for_update, 
                                    num_first_blocks_for_update=cfg['num_first_blocks_for_update'])
     params, param_names = custom.collect_params(model)
-
+    print(param_names)
 
     if cfg['optimizer'] == 'adam':
         optimizer = torch.optim.Adam(params,

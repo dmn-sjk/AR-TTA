@@ -13,7 +13,7 @@ def replace_bn(model: nn.Module, BN_module: nn.Module, n_repalced=0, number_to_r
         
         if isinstance(target_mod, nn.BatchNorm2d) or isinstance(target_mod, nn.SyncBatchNorm):
             # print(target_mod)
-            print(f" Insert {BN_module.__name__} to ", mod_name)
+            # print(f" Insert {BN_module.__name__} to ", mod_name)
             n_repalced += 1
             
             new_mod = BN_module(

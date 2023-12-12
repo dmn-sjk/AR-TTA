@@ -16,9 +16,10 @@ from .custom_strategy import get_custom_strategy
 from .bn_stats_adapt_strategy import get_bn_stats_adapt_strategy
 from .ema_teacher_strategy import get_ema_teacher_strategy
 from loggers import get_eval_plugin
+from custom_bns import configure_model_bn
 
 
-def get_strategy(cfg):
+def get_model(cfg):
     if cfg['model'] == 'resnet18':
         model = torchvision.models.resnet18(weights=torchvision.models.ResNet18_Weights.DEFAULT)
     elif cfg['model'] == 'resnet50':
@@ -52,6 +53,14 @@ def get_strategy(cfg):
         model.load_state_dict(torch.load(cfg['pretrained_model_path']))
         
     model.to(cfg['device'])
+    
+    model = configure_model_bn(cfg, model)
+
+    return model
+
+
+def get_strategy(cfg):
+    model = get_model(cfg)
 
     if cfg['watch_model']:
         eval_plugin = get_eval_plugin(cfg, model)
@@ -68,6 +77,8 @@ def get_strategy(cfg):
         
     elif cfg['method'] == "frozen":
         strategy = get_frozen_strategy(cfg, model, eval_plugin, plugins)
+    elif cfg['method'] == 'bn_stats_adapt':
+        strategy = get_bn_stats_adapt_strategy(cfg, model, eval_plugin, plugins)
     elif cfg['method'] == "tent":
         strategy = get_tent_strategy(cfg, model, eval_plugin, plugins)
     elif cfg['method'] == "cotta":
@@ -80,8 +91,6 @@ def get_strategy(cfg):
         strategy = get_sar_strategy(cfg, model, eval_plugin, plugins)
     elif cfg['method'] == 'custom':
         strategy = get_custom_strategy(cfg, model, eval_plugin, plugins)
-    elif cfg['method'] == 'bn_stats_adapt':
-        strategy = get_bn_stats_adapt_strategy(cfg, model, eval_plugin, plugins)
     elif cfg['method'] == 'ema_teacher':
         strategy = get_ema_teacher_strategy(cfg, model, eval_plugin, plugins)
     else:

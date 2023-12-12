@@ -10,11 +10,13 @@ import PIL
 import torchvision.transforms as transforms
 import re
 import numpy as np
+import wandb
 
 import utils.cotta_transforms as my_transforms
 from utils.intermediate_features import IntermediateFeaturesGetter
 from utils.utils import split_up_model
-from utils.dynamic_bn import DynamicBN, count_bn, replace_bn
+from custom_bns.mecta_bn import MectaBN
+from custom_bns.dynamic_bn import DynamicBN
 
 
 def get_tta_transforms(gaussian_std: float=0.005, soft=False, clip_inputs=False, img_size: int=64):
@@ -91,6 +93,8 @@ class Custom(nn.Module):
         
         self.adapt = True
         self.distillation_out_temp = distillation_out_temp
+        
+        self.step = 0
 
     def forward(self, x):
         if self.adapt:
@@ -115,11 +119,47 @@ class Custom(nn.Module):
 
     @torch.enable_grad()  # ensure grads in possible no grad context for testing
     def forward_and_adapt(self, x, model, optimizer):
+        if isinstance(x, list):
+            x, labels, _ = x
+            
+            labels = torch.nn.functional.one_hot(labels, num_classes=self.cfg['num_classes'])\
+                    .to(torch.float32)\
+                    .to(self.cfg['device'])
 
         ema_outputs = self.model_ema(x)
         student_outputs = self.model(x)
         source_outputs = self.model_source(x)
-
+        
+        # /* STATS DIST VISUALIZATION
+        if 'wandb' in self.cfg.keys() and self.cfg['wandb']:
+            i = 0
+            # dist_source_test, dist_test_used, dist_source_used = 0, 0, 0
+            for mod_name, module in self.model.named_modules():
+                if isinstance(module, DynamicBN):
+                    wandb.log({f"BN{i}_beta": module.beta}, step=self.step)
+                    # dist_source_test += gauss_symm_kl_divergence(module.test_mean.cuda(), module.test_var.cuda(),
+                    #                     module.saved_running_mean.cuda(), module.saved_running_var.cuda(), 
+                    #                     eps=1e-3).mean()
+                    # dist_test_used += gauss_symm_kl_divergence(module.test_mean.cuda(), module.test_var.cuda(),
+                    #                     module.running_mean.cuda(), module.running_var.cuda(), 
+                    #                     eps=1e-3).mean()
+                    # dist_source_used += gauss_symm_kl_divergence(module.saved_running_mean.cuda(), module.saved_running_var.cuda(),
+                    #                     module.running_mean.cuda(), module.running_var.cuda(), 
+                    #                     eps=1e-3).mean()
+                    i += 1
+            # mean
+            # dist_source_test /= i
+            # dist_test_used /= i
+            # dist_source_used /= i
+            
+            # wandb.log({'MeanKLDivDist_BNstats_source_test': dist_source_test}, step=self.step)
+            # wandb.log({'MeanKLDivDist_BNstats_test_used': dist_test_used}, step=self.step)
+            # wandb.log({'MeanKLDivDist_BNstats_source_used': dist_source_used}, step=self.step)
+            
+            self.step += 1
+        
+        # STATS DIST VISUALIZATION */
+                
         # pseudo_labels = source_outputs.detach().clone()
         if self.cfg['update_method'] == 'emateacher':
             pseudo_labels = ema_outputs.detach().clone()
@@ -253,8 +293,8 @@ class Custom(nn.Module):
                 raise ValueError(f"Unknown replay augs strategy name: {self.cfg['replay_augs']}")
 
 
-
         entropies = softmax_entropy(outputs_update / self.distillation_out_temp, pseudo_labels / self.distillation_out_temp, softmax_targets)
+        # entropies = softmax_entropy(outputs_update / self.distillation_out_temp, labels / self.distillation_out_temp, False)
         
         if self.cfg['sampling_method'] == 'eata_weight' or self.cfg['sampling_method'] == 'stochastic_entropy_weight':
             entropies = entropies.mul(coeff) # reweight entropy losses for diff. samples
@@ -314,7 +354,7 @@ def collect_params(model):
     for nm, m in model.named_modules():
         if True:#isinstance(m, nn.BatchNorm2d): collect all 
             for np, p in m.named_parameters():
-                if np in ['weight', 'bias'] and p.requires_grad:
+                if np in ['weight', 'bias', 'beta'] and p.requires_grad:
                     params.append(p)
                     names.append(f"{nm}.{np}")
     return params, names
@@ -340,7 +380,8 @@ def load_model_and_optimizer(model, optimizer, model_state, optimizer_state):
 def configure_model(model, params_for_update: list = None, num_first_blocks_for_update: int = -1):
     """Configure model for use with tent."""
     # train mode, because tent optimizes the model to minimize entropy
-    model.train()
+    # model.train()
+    model.eval()
     # disable grad, to (re-)enable only what we update
     model.requires_grad_(False)
 
@@ -391,10 +432,13 @@ def configure_model(model, params_for_update: list = None, num_first_blocks_for_
                 if f"{module_name}.{param_name}" in params_for_update:
                     param.requires_grad_(True)
         else:
+            # if isinstance(module, DynamicBN):
+            #     module.beta.requires_grad_(True)
             module.requires_grad_(True)
 
-        # if isinstance(module, nn.BatchNorm2d):
-        #     # force use of batch stats in train and eval modes
+        # if isinstance(module, nn.BatchNorm2d) and not isinstance(module, MectaBN):
+        # #     # force use of batch stats in train and eval modes
+        #     print("BN")
         #     module.track_running_stats = False
         #     module.running_mean = None
         #     module.running_var = None

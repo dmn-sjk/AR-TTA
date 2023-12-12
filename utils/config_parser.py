@@ -119,6 +119,11 @@ class ConfigParser:
                             help='Method of choosing samples for update')
         parser.add_argument('--update_method', type=str, default=argparse.SUPPRESS,
                             help='source_pseudolabels | emateacher')
+        parser.add_argument('--bn_stats', type=str, default=argparse.SUPPRESS,
+                            help='source | test | dynamicbn | mectabn | mectabn_original | adamixbn')
+        parser.add_argument('--fraction_bn_mod', type=int, default=argparse.SUPPRESS,
+                            help="Fraction of the whole number of BN layers from the shallow layers to modify.\
+                                Method of modification is determined by bn_stats argument")
         parser.add_argument('--wandb', action='store_true',
                             help="Log with wandb")
         parser.add_argument('--save_results', action='store_true',

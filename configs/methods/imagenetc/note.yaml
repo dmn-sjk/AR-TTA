@@ -6,3 +6,5 @@ weight_decay: 0.
 
 memory_size: 64
 batch_size: 64
+
+bn_stats: iabn
