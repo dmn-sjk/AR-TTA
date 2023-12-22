@@ -8,7 +8,8 @@ from strategies import ema_teacher
 from strategies.frozen_strategy import FrozenModel
 import clad
 from torch.nn import functional as F
-
+from utils.lora import add_lora, LoRAParametrization, get_lora_params
+from functools import partial
 
 
 def get_ema_teacher_strategy(cfg, model: torch.nn.Module, eval_plugin: EvaluationPlugin, plugins: Sequence):
@@ -18,8 +19,25 @@ def get_ema_teacher_strategy(cfg, model: torch.nn.Module, eval_plugin: Evaluatio
     model = ema_teacher.configure_model(model, 
                                    params_for_update=params_for_update, 
                                    num_first_blocks_for_update=cfg['num_first_blocks_for_update'])
-    params, param_names = ema_teacher.collect_params(model)
-    print(param_names)
+    
+    if cfg['lora']:
+        print("Using LoRA!!!")
+        alpha = 1
+        lora_config = {  # specify which layers to add lora to
+            torch.nn.Conv2d: {
+                "weight": partial(LoRAParametrization.from_conv2d, rank_param=cfg['lora_rank'], rank_mode=cfg['rank_mode'],
+                                  lora_alpha=alpha),
+            },
+            torch.nn.Linear: {
+                "weight": partial(LoRAParametrization.from_linear, rank_param=cfg['lora_rank'], rank_mode=cfg['rank_mode'],
+                                  lora_alpha=alpha),
+            },
+        }
+        add_lora(model, lora_config=lora_config)
+        params = get_lora_params(model, print_shapes=True)
+    else:
+        params, param_names = ema_teacher.collect_params(model)
+        print(param_names)
 
     if cfg['optimizer'] == 'adam':
         optimizer = torch.optim.Adam(params,

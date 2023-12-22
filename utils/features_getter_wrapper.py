@@ -22,10 +22,12 @@ from torchvision.models.feature_extraction import create_feature_extractor
 
 class FeaturesGetterWrapper(torch.nn.Module):
     def __init__(self, model, return_nodes=None):
-        super(FeaturesGetterWrapper, self).__init__()
-        
         # train_nodes, eval_nodes = get_graph_node_names(model)
         # print(train_nodes)
+        # import sys
+        # sys.exit()
+        
+        super(FeaturesGetterWrapper, self).__init__()
         
         self.model = create_feature_extractor(
             model, return_nodes=return_nodes)

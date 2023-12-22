@@ -20,8 +20,11 @@ from custom_bns.AdaMixBN import AdaMixBN
 
 
 def update_ema_variables(ema_model, model, alpha_teacher):
-    for ema_param, param in zip(ema_model.parameters(), model.parameters()):
+    for ema_param, param in zip(ema_model.named_parameters(), model.named_parameters()):
+        name_ema, ema_param = ema_param[0], ema_param[1] 
+        name, param = param[0], param[1]
         ema_param.data[:] = alpha_teacher * ema_param[:].data[:] + (1 - alpha_teacher) * param[:].data[:]
+    
     return ema_model
 
 
@@ -270,12 +273,13 @@ def configure_model(model, params_for_update: list = None, num_first_blocks_for_
             module.requires_grad_(True)
             
             # if isinstance(module, nn.BatchNorm2d) and not isinstance(module, MectaBN):
-            # #     # force use of batch stats in train and eval modes
-            #     print("BN stats reset")
+            #     # force use of batch stats in train and eval modes
             #     module.requires_grad_(True)
-            #     module.track_running_stats = False
-            #     module.running_mean = None
-            #     module.running_var = None
+            #     print("Updating only BN layers!!!")
+            #     # print("BN stats reset")
+            #     # module.track_running_stats = False
+            #     # module.running_mean = None
+            #     # module.running_var = None
 
     return model
 

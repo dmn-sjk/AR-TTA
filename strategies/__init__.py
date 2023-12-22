@@ -56,6 +56,8 @@ def get_model(cfg):
     
     model = configure_model_bn(cfg, model)
 
+    model.eval()
+
     return model
 
 

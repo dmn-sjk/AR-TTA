@@ -34,7 +34,7 @@ def get_eata_strategy(cfg, model: torch.nn.Module, eval_plugin: EvaluationPlugin
     elif cfg['dataset'] == 'clad':
         # TODO: for now val set has all the domains, maybe modify for only daytime and depending on the possibilities match the weather with train set 
         fisher_dataset = clad.get_cladc_val(cfg['data_root'], transform=None)
-    if cfg['dataset'] == 'imagenetc':
+    elif cfg['dataset'] == 'imagenetc':
         fisher_dataset = ImageNetCDataset(cfg['data_root'], corruption=None, split='val', transform=None,
                                      img_size=cfg['img_size'])
     else:

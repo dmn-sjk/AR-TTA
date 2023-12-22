@@ -28,6 +28,8 @@ def configure_model_bn(cfg, model):
         BN_to_inject = MectaBNOrig
     elif cfg['bn_stats'] == 'adamixbn':
         BN_to_inject = AdaMixBN
+    else:
+        raise ValueError(f"No such bn stats method: {cfg['bn_stats']}")
         
     print(f"Using {BN_to_inject.__name__} BN statistics!")
     

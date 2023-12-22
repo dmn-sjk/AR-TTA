@@ -124,6 +124,12 @@ class ConfigParser:
         parser.add_argument('--fraction_bn_mod', type=int, default=argparse.SUPPRESS,
                             help="Fraction of the whole number of BN layers from the shallow layers to modify.\
                                 Method of modification is determined by bn_stats argument")
+        parser.add_argument('--lora_rank', type=float, default=argparse.SUPPRESS,
+                            help="rank of lora")
+        parser.add_argument('--lora', action='store_true',
+                            help="whether to use lora")
+        parser.add_argument('--rank_mode', type=str, default=argparse.SUPPRESS,
+                            help='fixed | threshold | ratio | percentile')
         parser.add_argument('--wandb', action='store_true',
                             help="Log with wandb")
         parser.add_argument('--save_results', action='store_true',
