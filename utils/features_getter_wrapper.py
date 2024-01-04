@@ -1,36 +1,42 @@
 import torch
 from torchvision.models.feature_extraction import get_graph_node_names
 from torchvision.models.feature_extraction import create_feature_extractor
+from custom_bns.dynamic_bn import DynamicBN
 
-# _features_return_nodes = {
-#     'deeplabv2': {
-#         '1.layer1.2.relu_2': 'layer1',
-#         '1.layer2.3.relu_2': 'layer2',
-#         '1.layer3.22.relu_2': 'layer3',
-#         '1.layer4.2.relu_2': 'layer4',
-#         '1.interpolate': 'logits'
-#     },
-#     'deeplabv3': {
-#         '1.backbone.layer1.2.relu_2': 'layer1',
-#         '1.backbone.layer2.3.relu_2': 'layer2',
-#         '1.backbone.layer3.5.relu_2': 'layer3',
-#         # '1.backbone.layer4.2.relu_2': 'layer4',
-#         '1.classifier.3': 'layer4',
-#         '1.interpolate': 'logits'
-#     }
-# }
+
+features_return_nodes = {
+    'resnet50': {
+        'layer4.2.add': 'out_encoder',
+        'flatten': 'out_encoder_flatten',
+        'layer1.0.bn2': 'layer1.0.bn2',
+        'layer2.2.bn2': 'layer2.2.bn2'
+    },
+    'wideresnet28': {
+        'bn1': 'out_encoder',
+        'relu': 'out_encoder_relu',
+        'view': 'out_encoder_flatten',
+        'block1.layer.0.bn2': 'block1.layer.0.bn2',
+        'block2.layer.2.bn2': 'block2.layer.2.bn2'
+    }
+}
 
 class FeaturesGetterWrapper(torch.nn.Module):
     def __init__(self, model, return_nodes=None):
-        # train_nodes, eval_nodes = get_graph_node_names(model)
+        super(FeaturesGetterWrapper, self).__init__()
+        
+        self.model = create_feature_extractor(
+            model, return_nodes=return_nodes, 
+            tracer_kwargs={'leaf_modules': [torch.nn.BatchNorm2d]})
+
+    def forward(self, x):
+        return self.model(x)
+    
+    @staticmethod
+    def get_node_names(model):
+        train_nodes, eval_nodes = get_graph_node_names(model,
+                                                       tracer_kwargs={'leaf_modules': [torch.nn.BatchNorm2d]})
         # print(train_nodes)
         # import sys
         # sys.exit()
         
-        super(FeaturesGetterWrapper, self).__init__()
-        
-        self.model = create_feature_extractor(
-            model, return_nodes=return_nodes)
-
-    def forward(self, x):
-        return self.model(x)
+        return train_nodes

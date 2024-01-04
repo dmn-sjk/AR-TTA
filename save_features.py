@@ -25,7 +25,7 @@ cfg['device'] = torch.device(f"cuda:{cfg['cuda']}"
                                 if torch.cuda.is_available() and cfg['cuda'] >= 0
                                 else "cpu")
 
-model = get_model(cfg)
+orig_model = get_model(cfg)
 
 # encoder, classifier = split_up_model(model, cfg['model'])
 
@@ -53,18 +53,35 @@ if cfg['dataset'] == 'cifar10c':
     # "pixelate",
     # "jpeg_compression"
     
-    domain = 'jpeg_compression'
+    domain = 'gaussian_noise'
     src_test_data = CIFAR10CDataset(cfg['data_root'], corruption=None, split='test', transforms=None)
     src_train_data = CIFAR10CDataset(cfg['data_root'], corruption=None, split='train', transforms=None)
     
     corr_data = CIFAR10CDataset(cfg['data_root'], corruption=domain, split='test', transforms=None)
     
     return_nodes = {
-        'bn1': 'out_encoder',
+        # 'bn1': 'out_encoder_testStats',
+        'relu': 'out_encoder_relu',
         # 'block1.layer.0.bn2': 'block1.layer.0.bn2',
         # 'block2.layer.2.bn2': 'block2.layer.2.bn2'
     }
-    model = FeaturesGetterWrapper(model, return_nodes=return_nodes).cuda()
+    
+    
+    nodes = FeaturesGetterWrapper.get_node_names(orig_model)
+    # omit input node
+    nodes = nodes[1:]
+    nodes = nodes[::3] # save every third node
+    # return_nodes = {}
+    
+    # portion = 1
+    # size = 3
+    # start_idx = portion * size
+    # end_idx = portion * size + size
+    
+    # for node in nodes[start_idx:end_idx]:
+    #     return_nodes[node] = node
+    
+    model = FeaturesGetterWrapper(orig_model, return_nodes=return_nodes).cuda()
     
 elif cfg['dataset'] == 'clad':
     transforms = transforms.Compose([])
@@ -91,12 +108,18 @@ elif cfg['dataset'] == 'clad':
     domain = 'T' + str(domain_idx)
     
     return_nodes = {
-        'layer4.2.add': 'out_encoder',
+        # 'layer4.2.add': 'out_encoder',
+        'flatten': 'out_encoder_flatten',
         # 'layer1.0.bn2': 'layer1.0.bn2',
         # 'layer2.2.bn2': 'layer2.2.bn2'
     }
     
-    model = FeaturesGetterWrapper(model, return_nodes=return_nodes).cuda()
+    nodes = FeaturesGetterWrapper.get_node_names(orig_model)
+    # omit input node
+    nodes = nodes[1:]
+    nodes = nodes[::3] # save every third node
+    
+    model = FeaturesGetterWrapper(orig_model, return_nodes=return_nodes).cuda()
 
 # src_loader = torch.utils.data.DataLoader(src_data, batch_size=batch_size, shuffle=False, 
 #                                                 num_workers=cfg['num_workers'], pin_memory=True)
@@ -109,27 +132,51 @@ src_test_loader = torch.utils.data.DataLoader(src_test_data, batch_size=batch_si
 corr_loader = torch.utils.data.DataLoader(corr_data, batch_size=batch_size, shuffle=False, 
                                                 num_workers=cfg['num_workers'], pin_memory=True)
 
-features = {key: torch.empty((0,)) for key in return_nodes.values()}
 
-for imgs, _ in src_test_loader:
-    imgs = imgs.cuda()
-    
-    # feat = encoder(imgs)
-    # feat = {'out_encoder': feat}
-    feat = model(imgs)
-    # feat = model._features
-    for key in feat.keys():
-        curr_feat = feat[key].detach().cpu()
-        curr_feat = F.avg_pool2d(curr_feat, kernel_size=curr_feat.shape[-1]).squeeze()
-        features[key] = torch.cat([features[key], curr_feat], dim=0)
+size = 10
+portion = 0
+start_idx = portion * size
+end_idx = portion * size + size
 
-for key in features.keys():
-    out_dir = os.path.join('experiment_data','features',cfg['dataset'],key)
-    os.makedirs(out_dir, exist_ok=True)
-    # with open(os.path.join(out_dir, f'{domain}_BN_bs{batch_size}.npy'), 'wb') as f:
-    # with open(os.path.join(out_dir, f'{domain}_frozen.npy'), 'wb') as f:
-    with open(os.path.join(out_dir, f'src_test_frozen.npy'), 'wb') as f:
-        np.save(f, features[key].numpy())
-    print(f"{key}: {features[key].numpy().sum()}")
+end = False
+
+while not end:
+    # return_nodes = {}
+    # for node in nodes[start_idx:end_idx]:
+    #     return_nodes[node] = node
+
+    # model = FeaturesGetterWrapper(orig_model, return_nodes=return_nodes).cuda()
+
+    features = {key: torch.empty((0,)) for key in return_nodes.values()}
+
+    for imgs, _ in src_train_loader:
+        imgs = imgs.cuda()
         
-print("features saved")
+        with torch.no_grad():
+            feat = model(imgs)
+            for key in feat.keys():
+                curr_feat = feat[key]
+                if curr_feat.dim() == 4:
+                    curr_feat = F.avg_pool2d(curr_feat, kernel_size=curr_feat.shape[-1]).squeeze()
+                curr_feat = curr_feat.detach().cpu()
+                features[key] = torch.cat([features[key], curr_feat], dim=0)
+
+    for key in features.keys():
+        out_dir = os.path.join('experiment_data','features',cfg['dataset'],key)
+        os.makedirs(out_dir, exist_ok=True)
+        # with open(os.path.join(out_dir, f'{domain}_BN_bs{batch_size}.npy'), 'wb') as f:
+        # with open(os.path.join(out_dir, f'{domain}_frozen.npy'), 'wb') as f:
+        with open(os.path.join(out_dir, f'src_train_frozen.npy'), 'wb') as f:
+            np.save(f, features[key].numpy())
+        print(f"{key}: {features[key].numpy().sum()}")
+            
+    print("features saved")
+    
+    portion += 1
+    start_idx = portion * size
+    end_idx = portion * size + size
+    del model
+
+    # if start_idx >= len(nodes):
+    #     end = True
+    end = True

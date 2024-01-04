@@ -15,6 +15,7 @@ from .sar_strategy import get_sar_strategy
 from .custom_strategy import get_custom_strategy
 from .bn_stats_adapt_strategy import get_bn_stats_adapt_strategy
 from .ema_teacher_strategy import get_ema_teacher_strategy
+from .nonparametric_strategy import get_nonparametric_strategy
 from loggers import get_eval_plugin
 from custom_bns import configure_model_bn
 
@@ -95,6 +96,8 @@ def get_strategy(cfg):
         strategy = get_custom_strategy(cfg, model, eval_plugin, plugins)
     elif cfg['method'] == 'ema_teacher':
         strategy = get_ema_teacher_strategy(cfg, model, eval_plugin, plugins)
+    elif cfg['method'] == 'nonparametric':
+        strategy = get_nonparametric_strategy(cfg, model, eval_plugin, plugins)
     else:
         raise ValueError(f"Unknown method: {cfg['method']}")
     
