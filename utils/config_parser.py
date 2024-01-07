@@ -132,6 +132,8 @@ class ConfigParser:
                             help='fixed | threshold | ratio | percentile')
         parser.add_argument('--wandb', action='store_true',
                             help="Log with wandb")
+        parser.add_argument('--universal', type=float, default=argparse.SUPPRESS,
+                            help="param for various tests")
         parser.add_argument('--save_results', action='store_true',
                             help="Save results")
         parser.add_argument('--watch_model', action='store_true',

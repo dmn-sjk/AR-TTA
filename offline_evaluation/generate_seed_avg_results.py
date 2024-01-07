@@ -27,8 +27,8 @@ font = {'weight': 'normal',
 LOGS_TO_USE = []
 RESULTS_FOLDER = 'results'
 LOGS_FOLDER = 'logs'
-WINDOW_SIZE = 500 # for batch-wise train acc plot
-DISCARD_REPEATED_DOMAINS = True
+WINDOW_SIZE = 100 # for batch-wise train acc plot
+DISCARD_REPEATED_DOMAINS = False
 NOT_INCLUDE_LAST_DOMAIN_IN_AVERAGE = False
 OLD_CLAD_DOMAIN_NAMES = False
 POSSIBLE_METHODS = ['cotta', 'eata', 'tent', 'frozen', 'finetune', 'sar', 'custom']
@@ -51,8 +51,8 @@ def get_label(log_name):
     for i, method in enumerate(POSSIBLE_METHODS):
         start_idx = log_name.find(method)
         if start_idx != -1:
-            return LABELS[i]
-            # return log_name[start_idx:]
+            # return LABELS[i]
+            return log_name[start_idx:]
     raise ValueError(f"No method name found in log name: {log_name}")
 
 def get_plot_color(method):
@@ -161,8 +161,10 @@ def get_and_check_domains():
     domains = []
     for log in LOGS_TO_USE:
         print(log)
-        with open(os.path.join(LOGS_FOLDER, log, log + '_config.yaml'), "r") as f:
-            curr_domains = yaml.load(f, Loader=yaml.Loader)['domains']
+        # with open(os.path.join(LOGS_FOLDER, log, log + '_config.yaml'), "r") as f:
+        with open(os.path.join(LOGS_FOLDER, log, 'seed1234/domains.yaml'), "r") as f:
+            # curr_domains = yaml.load(f, Loader=yaml.Loader)['domains']
+            curr_domains = yaml.load(f, Loader=yaml.Loader)
             
             if len(curr_domains) == 0:
                 raise ValueError("Empty domains list!")
@@ -215,7 +217,7 @@ def load_results(accepted_domains_idxs):
         #     log_name = 'cifar10c_' + log + '_results.json'
         log_name = log + '_results.json'
         
-        with open(os.path.join(LOGS_FOLDER, log, log_name), 'r') as f:
+        with open(os.path.join(LOGS_FOLDER, log, 'seed1234', log_name), 'r') as f:
             results[log] = json.load(f)
             
             if DISCARD_REPEATED_DOMAINS:
@@ -353,17 +355,17 @@ def plot_batchwise_acc_train(results, domains, args):
     # TRAINING SEQUENCES
     fig, ax = plt.subplots(figsize=(15, 10))
     for method in LOGS_TO_USE:
-        whole_results = []
+        window_accs = []
         window.clear()
         for task_results in results[method]["Top1_Acc_MB/train_phase/train_stream"]:
-            window_accs = []
-            window.clear()
+            # window_accs = []
+            # window.clear()
             for batch_acc in task_results:
                 window.append(batch_acc)
                 window_accs.append(np.mean(window))
-            whole_results.extend(window_accs)
-        accs = np.array(whole_results) * 100.0
-        ax.plot(range(len(whole_results)), accs, label=get_label(method), color=get_plot_color(method))
+            
+        accs = np.array(window_accs) * 100.0
+        ax.plot(range(len(window_accs)), accs, label=get_label(method), color=get_plot_color(method))
 
     end_of_x_axis = 0
     xticks = [end_of_x_axis]
@@ -373,7 +375,7 @@ def plot_batchwise_acc_train(results, domains, args):
         xticks.append(end_of_x_axis)
 
     plt.xticks(xticks, [*domains, ''], rotation=45)
-    plt.grid(axis='both')
+    plt.grid(axis='both', color='r', linestyle='--', linewidth=1)
     plt.legend(loc='best')
     plt.tight_layout()
     plt.subplots_adjust(top=0.95)
@@ -759,7 +761,7 @@ def main(args):
     # # =======================================================================================
     # plot_avgtime_avgacc(results, avg_accs_train, args)
     # # =======================================================================================
-    # plot_batchwise_acc_train(results, domains, args)
+    plot_batchwise_acc_train(results, domains, args)
     # =======================================================================================
     
     # plot_domainwise_acc_train(each_domain_avg_accs_train, domains, args)
@@ -768,7 +770,7 @@ def main(args):
     # plot_acc_val(results, domains, args)
     # =======================================================================================
     # if args.per_class_acc:
-    plot_per_class_acc(results, domains, args)
+    # plot_per_class_acc(results, domains, args)
     # # =======================================================================================
     # if args.pred_class_ratio:
     #     plot_pred_class_ratio(results, domains, args)

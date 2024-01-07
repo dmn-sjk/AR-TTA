@@ -13,6 +13,7 @@ from .eata_strategy import get_eata_strategy
 from .note_strategy import get_note_strategy
 from .sar_strategy import get_sar_strategy
 from .custom_strategy import get_custom_strategy
+from .custom_strategy_cln import get_custom_strategy as get_custom_strategy_cln
 from .bn_stats_adapt_strategy import get_bn_stats_adapt_strategy
 from .ema_teacher_strategy import get_ema_teacher_strategy
 from .nonparametric_strategy import get_nonparametric_strategy
@@ -52,10 +53,10 @@ def get_model(cfg):
 
     if 'pretrained_model_path' in cfg.keys():
         model.load_state_dict(torch.load(cfg['pretrained_model_path']))
-        
-    model.to(cfg['device'])
     
     model = configure_model_bn(cfg, model)
+
+    model = model.to(cfg['device'])
 
     model.eval()
 
@@ -93,7 +94,8 @@ def get_strategy(cfg):
     elif cfg['method'] == 'sar':
         strategy = get_sar_strategy(cfg, model, eval_plugin, plugins)
     elif cfg['method'] == 'custom':
-        strategy = get_custom_strategy(cfg, model, eval_plugin, plugins)
+        # strategy = get_custom_strategy(cfg, model, eval_plugin, plugins)
+        strategy = get_custom_strategy_cln(cfg, model, eval_plugin, plugins)
     elif cfg['method'] == 'ema_teacher':
         strategy = get_ema_teacher_strategy(cfg, model, eval_plugin, plugins)
     elif cfg['method'] == 'nonparametric':
