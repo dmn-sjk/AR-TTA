@@ -74,7 +74,7 @@ def get_git_revision_hash() -> str:
     return subprocess.check_output(['git', 'rev-parse', 'HEAD']).decode('ascii').strip()
 
 
-def split_up_model(model, model_name, encoder_out_relu_to_classifier=False):
+def split_up_model(model, model_name, dataset=None, encoder_out_relu_to_classifier=False):
     """
     encoder_out_relu_to_classifier: encoder has relu activation at the end, if this argument is True
         this relu is moved to classifier (works for wideresnet only now)
@@ -89,7 +89,11 @@ def split_up_model(model, model_name, encoder_out_relu_to_classifier=False):
         else:
             encoder = nn.Sequential(*list(model.children())[:-1], nn.AvgPool2d(kernel_size=8, stride=8), nn.Flatten())
     elif 'resnet' in model_name:
-        encoder = nn.Sequential(*list(model.children())[:-1], nn.Flatten())
+        if dataset == 'imagenetc':
+            encoder = nn.Sequential(model.normalize, *list(model.model.children())[:-1], nn.Flatten())
+            model = model.model
+        else:
+            encoder = nn.Sequential(*list(model.children())[:-1], nn.Flatten())
         
     if encoder_out_relu_to_classifier and 'wideresnet' in model_name:
         classifier = nn.Sequential(list(model.children())[-2], model.fc)

@@ -39,7 +39,10 @@ class ImageNetCDataset(torch.utils.data.Dataset):
 
         
         if corruption is None:
-            folders_dir = os.path.join(data_root, 'ImageNet/ILSVRC/Data/CLS-LOC', split)
+            if split == 'val':
+                folders_dir = os.path.join(data_root, 'ImageNet/ILSVRC/Data/CLS-LOC/val_all_files')
+            else:
+                folders_dir = os.path.join(data_root, 'ImageNet/ILSVRC/Data/CLS-LOC', split)
         else:
             if severity not in SEVERITIES:
                 raise ValueError("Severity level unavailable")
