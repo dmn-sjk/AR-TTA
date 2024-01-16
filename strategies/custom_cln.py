@@ -1,7 +1,3 @@
-"""
-Code based on COTTA
-"""
-
 from copy import deepcopy
 import torch
 import torch.nn as nn
@@ -11,6 +7,10 @@ import torchvision.transforms as transforms
 import re
 import numpy as np
 import wandb
+import os
+from torch.nn import functional as F
+from torch.distributions import MultivariateNormal
+from collections import deque
 
 import utils.cotta_transforms as my_transforms
 from utils.intermediate_features import IntermediateFeaturesGetter
@@ -64,9 +64,8 @@ class Custom(nn.Module):
     def __init__(self, model, optimizer, cfg: dict, steps=1, img_size: int = 64,
                  distillation_out_temp: int = 1, features_distillation_weight: float = 1,
                  memory: dict = None, num_replay_samples: int = 10,
-                 alpha: float = 0.4, beta: float = 0.4):
+                 alpha: float = 0.4):
         super().__init__()
-        
         self.model = model
         self.optimizer = optimizer
         self.steps = steps
@@ -80,12 +79,11 @@ class Custom(nn.Module):
         assert steps > 0, "custom requires >= 1 step(s) to forward and update"
         
         self.alpha = alpha
-        self.beta = beta
-        
+
         self.model_state, self.optimizer_state, self.model_ema, self.model_source = \
             copy_model_and_optimizer(self.model, self.optimizer)
             
-        # self.encoder, self.classifier = split_up_model(self.model, self.cfg['model'])
+        self.encoder, self.classifier = split_up_model(self.model, self.cfg['model'])
         # self.encoder_ema, self.classifier_ema = split_up_model(self.model_ema, self.cfg['model'])
         # self.encoder_source, self.classifier_source = split_up_model(self.model_source, self.cfg['model'])
             
@@ -96,6 +94,46 @@ class Custom(nn.Module):
         
         self.step = 0
         self.ema = None
+        
+        if cfg['dataset'] == 'cifar10c':
+            prototypes_from = 'src_out_encoder_relu'
+        elif cfg['dataset'] == 'clad':
+            prototypes_from = 'src_out_encoder_flatten'
+        else:
+            raise NotImplementedError
+
+        prototypes_folder = 'experiment_data/prototypes'
+        self.covs = torch.empty((0,), dtype=torch.float)#.to(cfg['device'])
+        self.means = torch.empty((0,), dtype=torch.float)#.to(cfg['device'])
+        for class_id in range(cfg['num_classes']):
+            with open(os.path.join(prototypes_folder,  cfg['dataset'], prototypes_from, f'cov_class{class_id}.npy'), 'rb') as f: 
+                cov = np.load(f)
+                cov = torch.from_numpy(cov)#.to(cfg['device'])
+                
+                # cov = self._shrink_cov(cov)
+                
+                # cov = self._normalize_cov(cov)
+                        
+                self.covs = torch.cat([self.covs, cov[None, ...]], dim=0)
+            with open(os.path.join(prototypes_folder,  cfg['dataset'], prototypes_from, f'mean_class{class_id}.npy'), 'rb') as f: 
+                mean = np.load(f)
+                mean = torch.from_numpy(mean)#.to(cfg['device'])
+                # mean = F.normalize(mean, dim=-1)
+                self.means = torch.cat([self.means, mean[None, ...]], dim=0)
+
+        self.proto_distributions = []
+        for class_id in range(cfg['num_classes']):
+            self.proto_distributions.append(get_multivariate_distribution(self.means[class_id],
+                                                                          self.covs[class_id]))
+            
+        per_class_size = 5
+        self.buffer = [deque(maxlen=per_class_size) for _ in range(cfg['num_classes'])]
+        # initialize buffer with some samples
+        # num_init_samples = 5
+        # for class_id in range(cfg['num_classes']):
+        #     for _ in range(num_init_samples):
+        #         sample = self.proto_distributions[class_id].sample().to(self.cfg['device'])
+        #         self.buffer[class_id].append(sample)
 
     def forward(self, x):
         if self.adapt:
@@ -115,13 +153,11 @@ class Custom(nn.Module):
             # Use this line to also restore the teacher model                         
             self.model_state, self.optimizer_state, self.model_ema, self.model_source = \
                 copy_model_and_optimizer(self.model, self.optimizer)
-                
-        self.ema = None
-            
+
+
     def reset_model_probs(self, probs):
         self.current_model_probs = probs
 
-    # old one with a lot of options but too much unnececary forwards
     @torch.enable_grad()  # ensure grads in possible no grad context for testing
     def forward_and_adapt(self, x, model, optimizer):
         if isinstance(x, list):
@@ -133,8 +169,11 @@ class Custom(nn.Module):
 
         with torch.no_grad():
             ema_outputs = self.model_ema(x)
-            student_outputs = self.model(x)
             source_outputs = self.model_source(x)
+            # student_outputs = self.model(x)
+            student_features = self.encoder(x)
+            student_outputs = self.classifier(student_features)
+                
         
         # pseudo_labels = source_outputs.detach().clone()
         if self.cfg['update_method'] == 'emateacher':
@@ -202,6 +241,7 @@ class Custom(nn.Module):
             
             x_for_model_update = x[chosen_samples_mask]
             pseudo_labels = pseudo_labels[chosen_samples_mask]
+            print(x_for_model_update.shape[0])
         else:
             self.num_samples_update += x.shape[0]
             x_for_model_update = x
@@ -213,7 +253,7 @@ class Custom(nn.Module):
             
             replay_x = self.memory['x'][random_order_idxs].to(self.cfg['device'])
             if self.cfg['replay_augs'] == 'mixup_from_memory':
-                lam = np.random.beta(self.alpha, self.beta)
+                lam = np.random.beta(self.alpha, self.alpha)
                 mixupped_x = lam * x_for_model_update + (1 - lam) * replay_x
 
                 x_for_model_update = mixupped_x
@@ -223,7 +263,7 @@ class Custom(nn.Module):
                 x_for_model_update = torch.cat((x_for_model_update, replay_x), dim=0)
 
             elif self.cfg['replay_augs'] == 'mixup_within_memory':
-                lam = np.random.beta(self.alpha, self.beta)
+                lam = np.random.beta(self.alpha, self.alpha)
                 random_idxs = torch.randperm(x_for_model_update.shape[0])
                 replay_x = lam * replay_x + (1 - lam) * replay_x[random_idxs]
 
@@ -264,7 +304,9 @@ class Custom(nn.Module):
                 raise ValueError(f"Unknown replay augs strategy name: {self.cfg['replay_augs']}")
 
 
-        student_update_out = self.model(x_for_model_update)
+        # student_update_out = self.model(x_for_model_update)
+        student_features = self.encoder(x_for_model_update)
+        student_update_out = self.classifier(student_features)
 
         entropies = softmax_entropy(student_update_out / self.distillation_out_temp, pseudo_labels / self.distillation_out_temp, 
                                     softmax_targets)
@@ -283,39 +325,16 @@ class Custom(nn.Module):
             # Teacher update
             self.model_ema = update_ema_variables(ema_model = self.model_ema, model = self.model, alpha_teacher=self.cfg['mt'])
 
-        # if self.cfg['universal'] == 0.:
-        #     self.model = stochastic_restore(self.model, self.model_state)
-        # else:
-        #     self.ema = update_ema(self.ema, loss.item())
-        #     if self.ema is not None:
-        #         if self.ema < self.cfg['universal']:
-        #             print("ema < 0.2, now reset the model")
-        #             self.reset(only_student=True)
-            
-                
+        self.step += 1
         if self.cfg['update_method'] == 'emateacher':
             return ema_outputs
         else:
             return student_outputs
         
-def update_ema(ema, new_data):
-    if ema is None:
-        return new_data
-    else:
-        with torch.no_grad():
-            return 0.9 * ema + (1 - 0.9) * new_data
-        
-def stochastic_restore(model, initial_model_state, rst=0.1):
-    for nm, m  in model.named_modules():
-        if 'model.' in nm and 'model.' not in list(initial_model_state.keys())[10]:
-            nm = nm.replace('model.', '')
-        for npp, p in m.named_parameters():
-            if npp in ['weight', 'bias'] and p.requires_grad:
-                mask = (torch.rand(p.shape)<rst).float().cuda()
-                # print(mask.device, initial_model_state[f"{nm}.{npp}"].device, p.device)
-                with torch.no_grad():
-                    p.data = initial_model_state[f"{nm}.{npp}"] * mask + p * (1.-mask)
-    return model
+    def switch_bn_update(self, model, state: bool):
+        for mod_name, module in model.named_modules():
+            if isinstance(module, DynamicBN):
+                module.adapt_bn_stats = state
 
 def update_model_probs(current_model_probs, new_probs):
     if current_model_probs is None:
@@ -457,3 +476,33 @@ def check_model(model):
                                "check which require grad"
     has_bn = any([isinstance(m, nn.BatchNorm2d) for m in model.modules()])
     assert has_bn, "tent needs normalization for its optimization"
+
+def get_multivariate_distribution(mean, cov, init_eps=1e-5):
+    _cov = cov.clone()
+    distribution = None
+    eps = init_eps
+    while distribution is None:
+        try:
+            distribution = MultivariateNormal(mean, _cov)
+        except ValueError as e:
+            print("Regularizing cov matrix")
+            
+            if not torch.full(
+                    size=_cov.shape[:-2],
+                    fill_value=(_cov.shape[-2] == _cov.shape[-1]),
+                    dtype=torch.bool,
+                    device=_cov.device
+                ).all():
+                print("Problem with SQUARE condition")
+            elif not torch.isclose(_cov, _cov.mT, atol=1e-4).all(-2).all(-1).all():
+                print("Problem with SYMMETRIC condition")
+            elif not torch.linalg.cholesky_ex(_cov).info.eq(0).all():
+                print("Problem with POSITIVE DEFINITE condition")
+            else:
+                print(e)
+
+            identity_matrix = torch.eye(_cov.shape[0]).to(_cov.device)
+            _cov = _cov + eps * identity_matrix
+            eps *= 10
+    
+    return distribution

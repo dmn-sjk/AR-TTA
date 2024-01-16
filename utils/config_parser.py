@@ -101,8 +101,6 @@ class ConfigParser:
                             help="Scale for distributions distance in MectaBN")
         parser.add_argument('--alpha', type=float, default=argparse.SUPPRESS,
                             help="For beta distrib")
-        parser.add_argument('--beta', type=float, default=argparse.SUPPRESS,
-                            help="For beta distrib")
         parser.add_argument('--smoothing_beta', type=float, default=argparse.SUPPRESS,
                             help="Coeff for ema beta")
         parser.add_argument('--distillation_out_temp', type=int, default=argparse.SUPPRESS,

@@ -6,12 +6,14 @@ from custom_bns.dynamic_bn import DynamicBN
 
 features_return_nodes = {
     'resnet50': {
+        'fc': 'out',
         'layer4.2.add': 'out_encoder',
         'flatten': 'out_encoder_flatten',
         'layer1.0.bn2': 'layer1.0.bn2',
         'layer2.2.bn2': 'layer2.2.bn2'
     },
     'wideresnet28': {
+        'fc': 'out',
         'bn1': 'out_encoder',
         'relu': 'out_encoder_relu',
         'view': 'out_encoder_flatten',

@@ -110,7 +110,8 @@ def get_custom_strategy(cfg, model: torch.nn.Module, eval_plugin: EvaluationPlug
         raise ValueError(f"Unknown optimizer: {cfg['optimizer']}")
 
     memory = None
-    if cfg['replay_augs'] is not None and cfg['replay_augs'] not in ['none', 'None', 'null']:
+    if cfg['replay_augs'] is not None and cfg['replay_augs'] not in ['none', 'None', 'null'] \
+        and cfg['memory_size'] in cfg.keys() and cfg['memory_size'] != 0:
         if cfg['dataset'] == 'cifar10c':
             train_dataset = CIFAR10CDataset(cfg['data_root'], corruption=None, split='train', transforms=None)
         elif cfg['dataset'] == 'shift':
@@ -172,8 +173,7 @@ def get_custom_strategy(cfg, model: torch.nn.Module, eval_plugin: EvaluationPlug
                        features_distillation_weight=cfg['features_distillation_weight'],
                        memory=memory,
                        num_replay_samples=cfg['num_replay_samples'],
-                       alpha=cfg['alpha'],
-                       beta=cfg['beta'])
+                       alpha=cfg['alpha'])
 
     plugins.append(AdaptTurnoffPlugin())
 
