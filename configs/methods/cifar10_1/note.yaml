@@ -1,0 +1,10 @@
+iabn_k: 4
+bn_momentum: 0.01
+lr: 0.0001
+optimizer: adam
+weight_decay: 0.
+
+memory_size: 64
+batch_size: 64
+
+bn_stats: iabn

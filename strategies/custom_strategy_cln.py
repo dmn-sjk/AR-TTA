@@ -23,7 +23,7 @@ def get_custom_strategy(cfg, model: torch.nn.Module, eval_plugin: EvaluationPlug
     params_for_update = None
     if cfg['choose_params_with_fisher']:
         fisher_batch_size = 64
-        if cfg['dataset'] == 'cifar10c':
+        if cfg['dataset'] == 'cifar10c' or cfg['dataset'] == 'cifar10_1':
             fisher_dataset = CIFAR10CDataset(cfg['data_root'], corruption=None, split='test', transforms=None)
         elif cfg['dataset'] == 'shift':
             fisher_dataset = SHIFTClassificationDataset(split='val',
@@ -112,7 +112,7 @@ def get_custom_strategy(cfg, model: torch.nn.Module, eval_plugin: EvaluationPlug
     memory = None
     if cfg['replay_augs'] is not None and cfg['replay_augs'] not in ['none', 'None', 'null'] \
         and cfg['memory_size'] in cfg.keys() and cfg['memory_size'] != 0:
-        if cfg['dataset'] == 'cifar10c':
+        if cfg['dataset'] == 'cifar10c' or cfg['dataset'] == 'cifar10_1':
             train_dataset = CIFAR10CDataset(cfg['data_root'], corruption=None, split='train', transforms=None)
         elif cfg['dataset'] == 'shift':
             train_dataset = SHIFTClassificationDataset(split='train',

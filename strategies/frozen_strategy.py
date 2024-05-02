@@ -183,13 +183,14 @@ class FrozenModel(SupervisedTemplate):
             # self._after_update(**kwargs)
 
             self._after_training_iteration(**kwargs)
-            
-    def forward(self):
-        """Compute the model's output given the current mini-batch."""
-        return avalanche_forward(self.model, self.mbatch, self.mb_task_id)
+
+# UNCOMMENT BELOW FOR GT LABELS IN BATCHES
+#     def forward(self):
+#         """Compute the model's output given the current mini-batch."""
+#         return avalanche_forward(self.model, self.mbatch, self.mb_task_id)
     
-def avalanche_forward(model, x, task_labels):
-    if isinstance(model, MultiTaskModule):
-        return model(x, task_labels)
-    else:  # no task labels
-        return model(x)
+# def avalanche_forward(model, x, task_labels):
+#     if isinstance(model, MultiTaskModule):
+#         return model(x, task_labels)
+#     else:  # no task labels
+#         return model(x)

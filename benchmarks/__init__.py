@@ -2,6 +2,7 @@ from .cladc import get_cladc_benchmark
 from .cifar10c import get_cifar10c_benchmark
 from .shift import get_shift_benchmark
 from .imagenetc import get_imagenetc_benchmark
+from .cifar10_1 import get_cifar10_1_benchmark
 
 
 def get_benchmark(cfg):
@@ -13,6 +14,8 @@ def get_benchmark(cfg):
         return get_shift_benchmark(cfg)
     elif cfg['dataset'] == "imagenetc":
         return get_imagenetc_benchmark(cfg)
+    elif cfg['dataset'] == "cifar10_1":
+        return get_cifar10_1_benchmark(cfg)
     else:
         raise ValueError("Unknown benchmark name")
 

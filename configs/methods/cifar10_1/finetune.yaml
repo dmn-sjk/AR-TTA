@@ -1,0 +1,3 @@
+lr: 1.e-3
+optimizer: sgd
+nesterov: true

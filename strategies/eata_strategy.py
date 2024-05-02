@@ -20,7 +20,7 @@ import clad
 
 def get_eata_strategy(cfg, model: torch.nn.Module, eval_plugin: EvaluationPlugin, plugins: Sequence):
     fisher_batch_size = 64
-    if cfg['dataset'] == 'cifar10c':
+    if cfg['dataset'] == 'cifar10c' or cfg['dataset'] == 'cifar10_1':
         fisher_dataset = CIFAR10CDataset(cfg['data_root'], corruption=None, split='test', transforms=None)
     elif cfg['dataset'] == 'shift':
         fisher_dataset = SHIFTClassificationDataset(split='val',

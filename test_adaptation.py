@@ -22,15 +22,15 @@ def main():
     if cfg['dataset'] == 'cifar10c':
         shuffle = True
         from benchmarks.cifar10c import domain_to_experience_idx
-        
+    elif cfg['dataset'] == 'cifar10_1':
+        shuffle = True
+        from benchmarks.cifar10_1 import domain_to_experience_idx
     elif cfg['dataset'] == 'imagenetc':
         shuffle = True
         from benchmarks.imagenetc import domain_to_experience_idx
-        
     elif cfg['dataset'] == 'clad':
         shuffle = False
         from benchmarks.cladc import domain_to_experience_idx
-
     elif cfg['dataset'] == 'shift':
         shuffle = False
         from benchmarks.shift import domain_to_experience_idx

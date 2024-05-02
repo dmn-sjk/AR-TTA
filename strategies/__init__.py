@@ -17,6 +17,7 @@ from .custom_strategy_cln import get_custom_strategy as get_custom_strategy_cln
 from .bn_stats_adapt_strategy import get_bn_stats_adapt_strategy
 from .ema_teacher_strategy import get_ema_teacher_strategy
 from .nonparametric_strategy import get_nonparametric_strategy
+from .rmt_strategy import get_rmt_strategy
 from loggers import get_eval_plugin
 from custom_bns import configure_model_bn
 
@@ -47,7 +48,7 @@ def get_model(cfg):
     else:
         raise ValueError(f"Unknown model name: {cfg['model']}")
 
-    if not (cfg['dataset'] == 'cifar10c' and cfg['model'] == 'wideresnet28' \
+    if not (cfg['dataset'] in ['cifar10c', 'cifar10_1'] and cfg['model'] == 'wideresnet28' \
         or cfg['dataset'] == 'imagenetc' and cfg['model'] == 'resnet50'):    
         model.fc = torch.nn.Linear(model.fc.in_features, cfg['num_classes'], bias=True)
 
@@ -65,7 +66,7 @@ def get_model(cfg):
 
 def get_strategy(cfg):
     model = get_model(cfg)
-
+    
     if cfg['watch_model']:
         eval_plugin = get_eval_plugin(cfg, model)
     else:
@@ -100,6 +101,8 @@ def get_strategy(cfg):
         strategy = get_ema_teacher_strategy(cfg, model, eval_plugin, plugins)
     elif cfg['method'] == 'nonparametric':
         strategy = get_nonparametric_strategy(cfg, model, eval_plugin, plugins)
+    elif cfg['method'] == 'rmt':
+        strategy = get_rmt_strategy(cfg, model, eval_plugin, plugins)
     else:
         raise ValueError(f"Unknown method: {cfg['method']}")
     
