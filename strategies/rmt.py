@@ -351,8 +351,6 @@ class RMT(nn.Module):
     def forward_and_adapt(self, x):
         self.optimizer.zero_grad()
         
-        x = x[0]
-        
         # forward original test data
         features_test = self.feature_extractor(x)
         outputs_test = self.classifier(features_test)
