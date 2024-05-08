@@ -111,7 +111,7 @@ def get_custom_strategy(cfg, model: torch.nn.Module, eval_plugin: EvaluationPlug
 
     memory = None
     if cfg['replay_augs'] is not None and cfg['replay_augs'] not in ['none', 'None', 'null'] \
-        and cfg['memory_size'] in cfg.keys() and cfg['memory_size'] != 0:
+        and 'memory_size' in cfg.keys() and cfg['memory_size'] != 0:
         if cfg['dataset'] == 'cifar10c' or cfg['dataset'] == 'cifar10_1':
             train_dataset = CIFAR10CDataset(cfg['data_root'], corruption=None, split='train', transforms=None)
         elif cfg['dataset'] == 'shift':

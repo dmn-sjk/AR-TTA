@@ -95,36 +95,36 @@ class Custom(nn.Module):
         self.step = 0
         self.ema = None
         
-        if cfg['dataset'] == 'cifar10c':
-            prototypes_from = 'src_out_encoder_relu'
-        elif cfg['dataset'] == 'clad':
-            prototypes_from = 'src_out_encoder_flatten'
-        else:
-            raise NotImplementedError
+        # if cfg['dataset'] == 'cifar10c':
+        #     prototypes_from = 'src_out_encoder_relu'
+        # elif cfg['dataset'] == 'clad':
+        #     prototypes_from = 'src_out_encoder_flatten'
+        # else:
+        #     raise NotImplementedError
 
-        prototypes_folder = 'experiment_data/prototypes'
-        self.covs = torch.empty((0,), dtype=torch.float)#.to(cfg['device'])
-        self.means = torch.empty((0,), dtype=torch.float)#.to(cfg['device'])
-        for class_id in range(cfg['num_classes']):
-            with open(os.path.join(prototypes_folder,  cfg['dataset'], prototypes_from, f'cov_class{class_id}.npy'), 'rb') as f: 
-                cov = np.load(f)
-                cov = torch.from_numpy(cov)#.to(cfg['device'])
+        # prototypes_folder = 'experiment_data/prototypes'
+        # self.covs = torch.empty((0,), dtype=torch.float)#.to(cfg['device'])
+        # self.means = torch.empty((0,), dtype=torch.float)#.to(cfg['device'])
+        # for class_id in range(cfg['num_classes']):
+        #     with open(os.path.join(prototypes_folder,  cfg['dataset'], prototypes_from, f'cov_class{class_id}.npy'), 'rb') as f: 
+        #         cov = np.load(f)
+        #         cov = torch.from_numpy(cov)#.to(cfg['device'])
                 
-                # cov = self._shrink_cov(cov)
+        #         # cov = self._shrink_cov(cov)
                 
-                # cov = self._normalize_cov(cov)
+        #         # cov = self._normalize_cov(cov)
                         
-                self.covs = torch.cat([self.covs, cov[None, ...]], dim=0)
-            with open(os.path.join(prototypes_folder,  cfg['dataset'], prototypes_from, f'mean_class{class_id}.npy'), 'rb') as f: 
-                mean = np.load(f)
-                mean = torch.from_numpy(mean)#.to(cfg['device'])
-                # mean = F.normalize(mean, dim=-1)
-                self.means = torch.cat([self.means, mean[None, ...]], dim=0)
+        #         self.covs = torch.cat([self.covs, cov[None, ...]], dim=0)
+        #     with open(os.path.join(prototypes_folder,  cfg['dataset'], prototypes_from, f'mean_class{class_id}.npy'), 'rb') as f: 
+        #         mean = np.load(f)
+        #         mean = torch.from_numpy(mean)#.to(cfg['device'])
+        #         # mean = F.normalize(mean, dim=-1)
+        #         self.means = torch.cat([self.means, mean[None, ...]], dim=0)
 
-        self.proto_distributions = []
-        for class_id in range(cfg['num_classes']):
-            self.proto_distributions.append(get_multivariate_distribution(self.means[class_id],
-                                                                          self.covs[class_id]))
+        # self.proto_distributions = []
+        # for class_id in range(cfg['num_classes']):
+        #     self.proto_distributions.append(get_multivariate_distribution(self.means[class_id],
+        #                                                                   self.covs[class_id]))
             
         per_class_size = 5
         self.buffer = [deque(maxlen=per_class_size) for _ in range(cfg['num_classes'])]
