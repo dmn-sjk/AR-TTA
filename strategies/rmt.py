@@ -202,7 +202,7 @@ class RMT(nn.Module):
         # warm up the mean-teacher framework
         if self.warmup_steps > 0:
             warmup_ckpt_path = os.path.join(ckpt_path, "warmup")
-            ckpt_path = f"ckpt_warmup_{self.dataset_name}_{arch_name}_bs{batch_size_src}.pth"
+            ckpt_path = f"ckpt_warmup_{self.dataset_name}_{arch_name}_bs{batch_size_src}_lr{self.optimizer.param_groups[0]['lr']}.pth"
             ckpt_path = os.path.join(warmup_ckpt_path, ckpt_path)
 
             if os.path.exists(ckpt_path):
@@ -224,9 +224,9 @@ class RMT(nn.Module):
         # then skipping the state copy would save memory
         self.models = [self.model, self.model_ema, self.projector]
         self.model_states, self.optimizer_state, _, _ = copy_model_and_optimizer(self.model, self.optimizer)
-        
-        
-        
+
+
+
 
         # self.model_state, self.optimizer_state, self.model_ema, self.model_anchor = \
         #     copy_model_and_optimizer(self.model, self.optimizer)
