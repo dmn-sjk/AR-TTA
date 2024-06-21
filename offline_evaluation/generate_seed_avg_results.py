@@ -27,12 +27,12 @@ font = {'weight': 'normal',
 LOGS_TO_USE = []
 RESULTS_FOLDER = 'results'
 LOGS_FOLDER = 'logs'
-WINDOW_SIZE = 100 # for batch-wise train acc plot
+WINDOW_SIZE = 400 # for batch-wise train acc plot
 DISCARD_REPEATED_DOMAINS = False
 NOT_INCLUDE_LAST_DOMAIN_IN_AVERAGE = False
 OLD_CLAD_DOMAIN_NAMES = False
-POSSIBLE_METHODS = ['cotta', 'eata', 'tent', 'frozen', 'finetune', 'sar', 'custom']
-LABELS = ['CoTTA', 'EATA', 'TENT', 'Source', 'finetune', 'SAR', 'AR-TTA (ours)']
+POSSIBLE_METHODS = ['cotta', 'eata', 'tent', 'frozen', 'finetune', 'sar', 'custom', 'rmt']
+LABELS = ['CoTTA', 'EATA', 'TENT', 'Source', 'finetune', 'SAR', 'AR-TTA (ours)', 'RMT']
 USELESS_COLORS = ['gainsboro', 'snow', 'mistyrose', 'seashell', 'linen', 'oldlace',
                   'comsilk', 'ivory', 'lightyellow', 'honeydew', 'azure', 'aliceblue',
                   'lavender', 'lavenderblush', 'mintcream']
@@ -51,8 +51,8 @@ def get_label(log_name):
     for i, method in enumerate(POSSIBLE_METHODS):
         start_idx = log_name.find(method)
         if start_idx != -1:
-            # return LABELS[i]
-            return log_name[start_idx:]
+            return LABELS[i]
+            # return log_name[start_idx:]
     raise ValueError(f"No method name found in log name: {log_name}")
 
 def get_plot_color(method):
@@ -62,9 +62,9 @@ def get_plot_color(method):
     if 'frozen' in method and 'tab:red' not in colors.values():
         colors[method] = 'tab:red'
         return 'tab:red'
-    elif 'finetune' in method and 'tab:green' not in colors.values():
-        colors[method] = 'tab:green'
-        return 'tab:green'
+    # elif 'finetune' in method and 'tab:green' not in colors.values():
+    #     colors[method] = 'tab:green'
+    #     return 'tab:green'
     elif 'eata' in method and 'tab:orange' not in colors.values():
         colors[method] = 'tab:orange'
         return 'tab:orange' 
@@ -95,6 +95,9 @@ def get_plot_color(method):
     elif 'tent' in method and 'tab:purple' not in colors.values():
         colors[method] = 'tab:purple'
         return 'tab:purple'
+    elif 'rmt' in method and 'tab:green' not in colors.values():
+        colors[method] = 'tab:green'
+        return 'tab:green'
     
     # SAR mods
     # elif 'unifoptim_nores' in method:
@@ -113,7 +116,11 @@ def get_plot_color(method):
     
     elif 'sar' in method and 'tab:brown' not in colors.values():
         colors[method] = 'tab:brown'
-        return 'tab:brown' 
+        return 'tab:brown'
+    
+    elif 'custom' in method and 'tab:cyan' not in colors.values():
+        colors[method] = 'tab:cyan'
+        return 'tab:cyan' 
 
 
     while True:
@@ -247,7 +254,8 @@ def match_same_setups_with_different_seeds():
     run_names_without_seed = []
     for log in LOGS_TO_USE:
         run_name, method = get_run_name_and_method(log)
-        run_name_wo_seed = run_name.split('_', 1)[1]
+        # run_name_wo_seed = run_name.split('_', 1)[1]
+        run_name_wo_seed = run_name
         run_names_without_seed.append(method + '_' + run_name_wo_seed)
     
     run_names_without_seed = np.array(run_names_without_seed)
@@ -353,7 +361,8 @@ def plot_batchwise_acc_train(results, domains, args):
     window = deque(maxlen=WINDOW_SIZE)
 
     # TRAINING SEQUENCES
-    fig, ax = plt.subplots(figsize=(15, 10))
+    # fig, ax = plt.subplots(figsize=(15, 6))
+    fig, ax = plt.subplots(figsize=(15, 9))
     for method in LOGS_TO_USE:
         window_accs = []
         window.clear()
@@ -365,7 +374,13 @@ def plot_batchwise_acc_train(results, domains, args):
                 window_accs.append(np.mean(window))
             
         accs = np.array(window_accs) * 100.0
-        ax.plot(range(len(window_accs)), accs, label=get_label(method), color=get_plot_color(method))
+        label = get_label(method)
+        if 'Source' in label:
+            linestyle = '--'
+        else:
+            linestyle = '-'
+        ax.plot(range(len(window_accs)), accs, label=get_label(method), color=get_plot_color(method), 
+                linestyle=linestyle)
 
     end_of_x_axis = 0
     xticks = [end_of_x_axis]
@@ -374,16 +389,24 @@ def plot_batchwise_acc_train(results, domains, args):
         end_of_x_axis += task_samples
         xticks.append(end_of_x_axis)
 
-    plt.xticks(xticks, [*domains, ''], rotation=45)
-    plt.grid(axis='both', color='r', linestyle='--', linewidth=1)
-    plt.legend(loc='best')
+    domain_names = [domain.replace('_', ' ').title() for domain in domains]
+    plt.xticks(xticks, [*domain_names, ''], rotation=90)
+    size=20
+    plt.yticks(fontsize=size)
+    plt.xticks(fontsize=size)
+    # plt.grid(axis='both', color='r', linestyle='--', linewidth=1)
+    plt.grid(axis='both', linestyle='-', linewidth=2)
+    plt.legend(loc='best', fontsize=size)
     plt.tight_layout()
     plt.subplots_adjust(top=0.95)
-    plt.title("Train sequences accuracy")
-    plt.xlabel("Task")
-    plt.ylabel("Accuracy [%]")
+    # plt.title("Train sequences accuracy", fontsize=size + 5)
+    plt.xlabel("Domain", fontsize=size+3)
+    # plt.xlabel("Batches", fontsize=size+3)
+    plt.ylabel("Accuracy [%]", fontsize=size+3)
     if args.save_results:
-        plt.savefig(os.path.join(RESULTS_FOLDER, args.results_name, 'train_batchwise_acc_plot'))
+        # plt.savefig(os.path.join(RESULTS_FOLDER, args.results_name, 'train_batchwise_acc_plot'))
+        plt.savefig(os.path.join(RESULTS_FOLDER, args.results_name, 'train_batchwise_acc_plot.pdf'), 
+                    dpi=1200, bbox_inches='tight')
     else:
         plt.show()
         

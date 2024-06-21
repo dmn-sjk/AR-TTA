@@ -1,4 +1,4 @@
-lr: 0.01
+lr: 3.125e-05
 optimizer: sgd
 beta: 0.9
 weight_decay: 0.

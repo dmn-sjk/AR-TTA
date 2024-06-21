@@ -274,7 +274,13 @@ def evaluate_results(cfg):
 
         # random seed-averaged check
         num_of_checks = 10
-        for random_domain in np.random.randint(len(domains_sequence_idxs) - 1, size=(num_of_checks,)):
+
+        if len(domains_sequence_idxs) > 1:
+            random_domains = np.random.randint(len(domains_sequence_idxs) - 1, size=(num_of_checks,))
+        else: 
+            random_domains = [0] * num_of_checks
+
+        for random_domain in random_domains:
             random_batch = np.random.randint(len(results["Top1_Acc_MB/train_phase/train_stream"][random_domain]))
 
             assert results["Top1_Acc_MB/train_phase/train_stream"][random_domain][random_batch] == \
