@@ -390,10 +390,31 @@ def plot_batchwise_acc_train(results, domains, args):
         xticks.append(end_of_x_axis)
 
     domain_names = [domain.replace('_', ' ').title() for domain in domains]
-    plt.xticks(xticks, [*domain_names, ''], rotation=90)
+    #plt.xticks(xticks, [*domain_names, ''], rotation=0)
+    ax.set_xticks(xticks[:-1])
+    ax.set_xticklabels(domain_names, rotation=90)
+    ax.set_xlim(0, xticks[-1])
+
     size=20
-    plt.yticks(fontsize=size)
-    plt.xticks(fontsize=size)
+    ax.tick_params(axis='x', which='major', labelsize=size, pad=35)
+    ax.tick_params(axis='y', which='major', labelsize=size)
+    
+    
+    minor_ticks = np.linspace(0, xticks[-1], 8, dtype=int)
+    for i, tick in enumerate(minor_ticks):
+        if i == len(minor_ticks)-1:
+            # for CLAD-C:
+            #tick_label = 17092
+            # for SHIFT-C
+            #tick_label = 437706
+            #for ImageNet-C and CIFAR10C
+            tick_label = tick * 10
+        else:
+            tick_label = tick * 10
+        ax.text(tick, ax.get_ylim()[0], tick_label, verticalalignment='top', 
+                horizontalalignment='center', fontsize=size-4)
+
+
     # plt.grid(axis='both', color='r', linestyle='--', linewidth=1)
     plt.grid(axis='both', linestyle='-', linewidth=2)
     plt.legend(loc='best', fontsize=size)
@@ -401,7 +422,7 @@ def plot_batchwise_acc_train(results, domains, args):
     plt.subplots_adjust(top=0.95)
     # plt.title("Train sequences accuracy", fontsize=size + 5)
     plt.xlabel("Domain", fontsize=size+3)
-    # plt.xlabel("Batches", fontsize=size+3)
+    #plt.xlabel("Images", fontsize=size+3)
     plt.ylabel("Accuracy [%]", fontsize=size+3)
     if args.save_results:
         # plt.savefig(os.path.join(RESULTS_FOLDER, args.results_name, 'train_batchwise_acc_plot'))

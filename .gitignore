@@ -12,3 +12,4 @@ notebooks
 wandb/*
 *.pdf
 experiment_data/*
+*.pth
