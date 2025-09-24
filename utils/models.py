@@ -4,7 +4,7 @@ import torch
 from robustbench.utils import load_model
 import timm
 
-from custom_bns import configure_model_bn
+from batch_norms import configure_model_bns
 
 
 
@@ -38,7 +38,7 @@ def get_model(cfg):
     if 'pretrained_model_path' in cfg.keys():
         model.load_state_dict(torch.load(cfg['pretrained_model_path']))
     
-    model = configure_model_bn(cfg, model)
+    model = configure_model_bns(cfg, model)
     model = model.to(cfg['device'])
     model.eval()
 
