@@ -73,21 +73,9 @@ def get_seed_folder(cfg: dict) -> str:
 def get_git_revision_hash() -> str:
     return subprocess.check_output(['git', 'rev-parse', 'HEAD']).decode('ascii').strip()
 
-
-def split_up_model(model, model_name, dataset=None, encoder_out_relu_to_classifier=False):
-    """
-    encoder_out_relu_to_classifier: encoder has relu activation at the end, if this argument is True
-        this relu is moved to classifier (works for wideresnet only now)
-        TODO: check sensibility of doing that for resnet since it has relu on output inside one of the bottlenecks
-    """
-    if encoder_out_relu_to_classifier and 'wideresnet' not in model_name:
-        raise NotImplementedError()
-    
+def split_up_model(model, model_name, dataset=None):
     if 'wideresnet' in model_name: 
-        if encoder_out_relu_to_classifier:
-            encoder = nn.Sequential(*list(model.children())[:-2], nn.AvgPool2d(kernel_size=8, stride=8), nn.Flatten())
-        else:
-            encoder = nn.Sequential(*list(model.children())[:-1], nn.AvgPool2d(kernel_size=8, stride=8), nn.Flatten())
+        encoder = nn.Sequential(*list(model.children())[:-1], nn.AvgPool2d(kernel_size=8, stride=8), nn.Flatten())
     elif 'resnet' in model_name:
         if dataset == 'imagenetc':
             encoder = nn.Sequential(model.normalize, *list(model.model.children())[:-1], nn.Flatten())
@@ -95,97 +83,7 @@ def split_up_model(model, model_name, dataset=None, encoder_out_relu_to_classifi
         else:
             encoder = nn.Sequential(*list(model.children())[:-1], nn.Flatten())
         
-    if encoder_out_relu_to_classifier and 'wideresnet' in model_name:
-        classifier = nn.Sequential(list(model.children())[-2], model.fc)
-    else:
-        classifier = model.fc
-
-    return encoder, classifier
-
-# TODO: merge with split_up_model
-def split_up_model_new(model, model_name, dataset_name: str):
-    if "wideresnet" in model_name and dataset_name in {"cifar10", "cifar10c", "cifar10_1"}:
-        encoder = nn.Sequential(*list(model.children())[:-1], nn.AvgPool2d(kernel_size=8, stride=8), nn.Flatten())
-    elif 'resnet' in model_name:
-        if dataset_name == 'imagenetc':
-            encoder = nn.Sequential(model.normalize, *list(model.model.children())[:-1], nn.Flatten())
-            model = model.model
-        else:
-            encoder = nn.Sequential(*list(model.children())[:-1], nn.Flatten())
-    else:
-        raise NotImplementedError()
-    
     classifier = model.fc
-    return encoder, classifier
-    
-    
-    """
-    Split up the model into an encoder and a classifier.
-    This is required for methods like RMT and AdaContrast
-    Input:
-        model: Model to be split up
-        arch_name: Name of the network
-        dataset_name: Name of the dataset
-    Returns:
-        encoder: The encoder of the model
-        classifier The classifier of the model
-    """
-    if hasattr(model, "model") and hasattr(model.model, "pretrained_cfg") and hasattr(model.model, model.model.pretrained_cfg["classifier"]):
-        # split up models loaded from timm
-        classifier = deepcopy(getattr(model.model, model.model.pretrained_cfg["classifier"]))
-        encoder = model
-        encoder.model.reset_classifier(0)
-        if isinstance(model, ImageNetXWrapper):
-            encoder = nn.Sequential(encoder.normalize, encoder.model)
-
-    elif arch_name == "Standard" and dataset_name in {"cifar10", "cifar10_c", "cifar10_1"}:
-        encoder = nn.Sequential(*list(model.children())[:-1], nn.AvgPool2d(kernel_size=8, stride=8), nn.Flatten())
-        classifier = model.fc
-    elif arch_name == "Hendrycks2020AugMix_WRN":
-        normalization = ImageNormalizer(mean=model.mu, std=model.sigma)
-        encoder = nn.Sequential(normalization, *list(model.children())[:-1], nn.AvgPool2d(kernel_size=8, stride=8), nn.Flatten())
-        classifier = model.fc
-    elif arch_name == "Hendrycks2020AugMix_ResNeXt":
-        normalization = ImageNormalizer(mean=model.mu, std=model.sigma)
-        encoder = nn.Sequential(normalization, *list(model.children())[:2], nn.ReLU(), *list(model.children())[2:-1], nn.Flatten())
-        classifier = model.classifier
-    elif dataset_name == "domainnet126":
-        encoder = model.encoder
-        classifier = model.fc
-    elif "resnet" in arch_name or "resnext" in arch_name or "wide_resnet" in arch_name or arch_name in {"Standard_R50", "Hendrycks2020AugMix", "Hendrycks2020Many", "Geirhos2018_SIN"}:
-        encoder = nn.Sequential(model.normalize, *list(model.model.children())[:-1], nn.Flatten())
-        classifier = model.model.fc
-    elif "densenet" in arch_name:
-        encoder = nn.Sequential(model.normalize, model.model.features, nn.ReLU(), nn.AdaptiveAvgPool2d((1, 1)), nn.Flatten())
-        classifier = model.model.classifier
-    elif "efficientnet" in arch_name:
-        encoder = nn.Sequential(model.normalize, model.model.features, model.model.avgpool, nn.Flatten())
-        classifier = model.model.classifier
-    elif "mnasnet" in arch_name:
-        encoder = nn.Sequential(model.normalize, model.model.layers, nn.AdaptiveAvgPool2d(output_size=(1, 1)), nn.Flatten())
-        classifier = model.model.classifier
-    elif "shufflenet" in arch_name:
-        encoder = nn.Sequential(model.normalize, *list(model.model.children())[:-1], nn.AdaptiveAvgPool2d(output_size=(1, 1)), nn.Flatten())
-        classifier = model.model.fc
-    elif "vit_" in arch_name and not "maxvit_" in arch_name:
-        encoder = TransformerWrapper(model)
-        classifier = model.model.heads.head
-    elif "swin_" in arch_name:
-        encoder = nn.Sequential(model.normalize, model.model.features, model.model.norm, model.model.permute, model.model.avgpool, model.model.flatten)
-        classifier = model.model.head
-    elif "convnext" in arch_name:
-        encoder = nn.Sequential(model.normalize, model.model.features, model.model.avgpool)
-        classifier = model.model.classifier
-    elif arch_name == "mobilenet_v2":
-        encoder = nn.Sequential(model.normalize, model.model.features, nn.AdaptiveAvgPool2d((1, 1)), nn.Flatten())
-        classifier = model.model.classifier
-    else:
-        raise ValueError(f"The model architecture '{arch_name}' is not supported for dataset '{dataset_name}'.")
-
-    # add a masking layer to the classifier
-    if dataset_name in ["imagenet_a", "imagenet_r", "imagenet_v2", "imagenet_d109"]:
-        mask = eval(f"{dataset_name.upper()}_MASK")
-        classifier = nn.Sequential(classifier, ImageNetXMaskingLayer(mask))
 
     return encoder, classifier
 

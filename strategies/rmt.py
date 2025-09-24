@@ -12,11 +12,8 @@ from torch.utils.data import DataLoader
 from torch.nn import functional as F 
 
 import utils.cotta_transforms as my_transforms
-from utils.intermediate_features import IntermediateFeaturesGetter
-from utils.utils import split_up_model_new
+from utils.utils import split_up_model
 from utils.transforms import get_transforms
-from utils.config_parser import ConfigParser
-from utils.utils import set_seed
 from datasets.shift import SHIFTClassificationDataset
 from datasets.cifar10c import CIFAR10CDataset
 from datasets import clad
@@ -149,7 +146,7 @@ class RMT(nn.Module):
         for param in self.model_ema.parameters():
             param.detach_()
 
-        self.feature_extractor, self.classifier = split_up_model_new(self.model, arch_name, self.dataset_name)
+        self.feature_extractor, self.classifier = split_up_model(self.model, arch_name, self.dataset_name)
 
         # define the prototype paths
         proto_dir_path = os.path.join(ckpt_path, "prototypes")
