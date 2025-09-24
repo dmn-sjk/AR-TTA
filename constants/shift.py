@@ -1,4 +1,4 @@
-from shift_dev.types import WeathersCoarse, TimesOfDayCoarse
+from datasets.shift_dev.types import WeathersCoarse, TimesOfDayCoarse
 
 
 WEATHERS_SEQUENCE = [WeathersCoarse.clear,

@@ -19,9 +19,9 @@ from utils.config_parser import ConfigParser
 from utils.utils import set_seed
 from datasets.shift import SHIFTClassificationDataset
 from datasets.cifar10c import CIFAR10CDataset
-import clad
-from shift_dev.types import WeathersCoarse, TimesOfDayCoarse
-from shift_dev.utils.backend import ZipBackend
+from datasets import clad
+from datasets.shift_dev.types import WeathersCoarse, TimesOfDayCoarse
+from datasets.shift_dev.utils.backend import ZipBackend
 from datasets.imagenetc import ImageNetCDataset
 
 
@@ -150,7 +150,6 @@ class RMT(nn.Module):
             param.detach_()
 
         self.feature_extractor, self.classifier = split_up_model_new(self.model, arch_name, self.dataset_name)
-        # print(self.feature_extractor)
 
         # define the prototype paths
         proto_dir_path = os.path.join(ckpt_path, "prototypes")
@@ -226,21 +225,6 @@ class RMT(nn.Module):
         self.model_states, self.optimizer_state, _, _ = copy_model_and_optimizer(self.model, self.optimizer)
 
 
-
-
-        # self.model_state, self.optimizer_state, self.model_ema, self.model_anchor = \
-        #     copy_model_and_optimizer(self.model, self.optimizer)
-            
-        # if features_distillation:
-        #     self.model = IntermediateFeaturesGetter(self.model)
-
-        #     # name of penultimate layer
-        #     self.features_layer = list(model.named_children())[-2][0]
-        #     self.model.register_features(self.features_layer)
-
-            
-        # self.transform = get_tta_transforms(img_size=img_size) 
-    
     @torch.enable_grad()  # ensure grads in possible no grad context for testing
     def warmup(self):
         print(f"Starting warm up...")

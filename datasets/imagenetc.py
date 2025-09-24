@@ -8,7 +8,7 @@ from PIL import Image
 from torchvision.transforms.functional import pil_to_tensor
 from torchvision import transforms
 
-from constants.corrupted import SEVERITIES, CORRUPTIONS
+from constants.corrupted import SEVERITIES, CORRUPTIONS_SEQ
 
 
 
@@ -47,7 +47,7 @@ class ImageNetCDataset(torch.utils.data.Dataset):
             if severity not in SEVERITIES:
                 raise ValueError("Severity level unavailable")
 
-            if corruption not in CORRUPTIONS:
+            if corruption not in CORRUPTIONS_SEQ:
                 raise ValueError(f"Unknown corruption: {corruption}")
             
             folders_dir = os.path.join(data_root, "ImageNet-C", corruption, str(severity))

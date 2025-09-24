@@ -4,49 +4,24 @@ from avalanche.benchmarks.utils import (
 )
 from avalanche.benchmarks.scenarios import GenericCLScenario
 from avalanche.benchmarks.scenarios.generic_benchmark_creation import create_multi_dataset_generic_benchmark
-from copy import copy
-import numpy as np
 
 from utils.transforms import get_transforms
-from constants.corrupted import LONG_DOMAINS_SEQ, REPETITIVE_DOMAINS_SEQ, STANDARD_DOMAINS_SEQ
+from constants.corrupted import CORRUPTIONS_SEQ
 from datasets.cifar10c import CIFAR10CDataset
+from . import register_benchmark
 
 
+@register_benchmark("cifar10c")
 def get_cifar10c_benchmark(cfg) -> GenericCLScenario:
     train_sets = []
     val_sets = []
-    if cfg['benchmark'] in ["cifar10c_standard", "cifar10c_long_random", "cifar10c_random"]:
-        corruptions = copy(STANDARD_DOMAINS_SEQ)
-    elif cfg['benchmark'] == "cifar10c_long":
-        corruptions = copy(LONG_DOMAINS_SEQ)
-    elif cfg['benchmark'] == "cifar10c_repetitive":
-        corruptions = copy(REPETITIVE_DOMAINS_SEQ)
-    else:
-        raise ValueError("Unknown type of cifar benchmark")
-
-    if cfg['benchmark'] == 'cifar10c_long_random':
-        cfg['domains'] = np.random.choice(corruptions, size=150, replace=True).astype(str).tolist()
-    elif cfg['benchmark'] == 'cifar10c_random':
-        cfg['domains'] = np.random.choice(corruptions, size=len(corruptions), replace=False).astype(str).tolist()
-    else:
-        cfg['domains'] = corruptions
+    cfg['domains'] = CORRUPTIONS_SEQ
     
     transforms_test = get_transforms(cfg, train=False)
 
     val_sets.append(CIFAR10CDataset(cfg['data_root'], corruption=None, split="test", transforms=transforms_test))
-    for corruption in corruptions:
+    for corruption in CORRUPTIONS_SEQ:
         train_sets.append(CIFAR10CDataset(cfg['data_root'], corruption=corruption, split="test", transforms=transforms_test, imbalanced=cfg['imbalanced']))        
-
-    # cfg['domains'] = corruptions[1::2]
-
-    if cfg['end_with_source_domain']:
-        train_sets.append(CIFAR10CDataset(cfg['data_root'], corruption=None, split="test", transforms=transforms_test))
-        cfg['domains'].append('clear')
-
-    # transform_groups = dict(
-    #     train=(transforms_train, None),
-    #     eval=(transforms_test, None),
-    # )
 
     train_exps_datasets = []
     for i, train_set in enumerate(train_sets):
@@ -74,6 +49,7 @@ def get_cifar10c_benchmark(cfg) -> GenericCLScenario:
             classification_subset(val_dataset_avl)
         )
 
+    # TODO: remove test datasets, since the evaluation is not done nevertheless
     return create_multi_dataset_generic_benchmark(train_datasets=train_exps_datasets,
                                                   test_datasets=val_exps_datasets,
                                                   #   train_transform=transforms_train,
@@ -81,7 +57,7 @@ def get_cifar10c_benchmark(cfg) -> GenericCLScenario:
                                                   )
 
 def domain_to_experience_idx(domain):
-    if domain in STANDARD_DOMAINS_SEQ:
-        return STANDARD_DOMAINS_SEQ.index(domain)
+    if domain in CORRUPTIONS_SEQ:
+        return CORRUPTIONS_SEQ.index(domain)
     elif domain == 'clear':
-        return len(STANDARD_DOMAINS_SEQ)
+        return len(CORRUPTIONS_SEQ)

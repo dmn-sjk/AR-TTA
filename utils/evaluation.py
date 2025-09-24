@@ -230,15 +230,9 @@ def evaluate_results(cfg):
     per_seed_domains = load_per_seed_domains(per_seed_paths)
     
     per_seed_domains_sequence = {}
-    if cfg['end_with_source_domain']:
-        for seed in per_seed_domains.keys():
-            per_seed_domains_sequence[seed] = per_seed_domains[seed][:-1]
-        # every seed always the same number of domains, the order might change
-        source_domain_idx =  len(per_seed_domains[seed]) - 1
-    else:
-        for seed in per_seed_domains.keys():
-            per_seed_domains_sequence[seed] = per_seed_domains[seed]
-        source_domain_idx = None
+    for seed in per_seed_domains.keys():
+        per_seed_domains_sequence[seed] = per_seed_domains[seed]
+    source_domain_idx = None
 
     domains_sequence_idxs = list(range(len(per_seed_domains_sequence[list(per_seed_domains_sequence.keys())[0]])))
 
@@ -259,17 +253,8 @@ def evaluate_results(cfg):
             main_results_all[key].append(main_results_all_seed[key])
 
     if len(per_seed_paths) > 1:
-        if 'long_random' in cfg['benchmark']:
-            # TODO:
-            raise NotImplementedError("For now it is assumed that each seed has the same number of occurances. \
-                Long random benchmarks break this assumption")
-
-        # change the order of results to match domains in each seed, in case of different order of domains between seeds
         # (to meet the assumption in avg_per_seed_results func)
-        if 'random' in cfg['benchmark']:
-            per_seed_results, domains_sequence = unify_domains_order(per_seed_results, per_seed_domains_sequence, source_domain_idx)
-        else:
-            domains_sequence = per_seed_domains_sequence[list(per_seed_domains_sequence.keys())[0]]
+        domains_sequence = per_seed_domains_sequence[list(per_seed_domains_sequence.keys())[0]]
         results = avg_per_seed_results(per_seed_results)
 
         # random seed-averaged check

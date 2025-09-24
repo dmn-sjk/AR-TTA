@@ -3,24 +3,21 @@ import numpy as np
 from avalanche.training.plugins import EvaluationPlugin
 from typing import Sequence
 
-from strategies.adapt_turnoff_plugin import AdaptTurnoffPlugin
+from utils.adapt_turnoff_plugin import AdaptTurnoffPlugin
 from strategies import sar
 from strategies.frozen_strategy import FrozenModel
 from utils.sam import SAM
+from . import register_strategy
+from utils.optim import get_optimizer
 
 
+@register_strategy("sar")
 def get_sar_strategy(cfg, model: torch.nn.Module, eval_plugin: EvaluationPlugin, plugins: Sequence):
     model = sar.configure_model(model)
     params, param_names = sar.collect_params(model)
     
-    if cfg['optimizer'] == 'adam':
-        base_optimizer = torch.optim.Adam
-        optimizer = SAM(params, base_optimizer, lr=cfg['lr'], betas=(cfg['beta'], 0.999), weight_decay=cfg['weight_decay'])
-    elif cfg['optimizer'] == 'sgd':
-        base_optimizer = torch.optim.SGD
-        optimizer = SAM(params, base_optimizer, lr=cfg['lr'], momentum=0.9, nesterov=cfg['nesterov'])
-    else:
-        raise ValueError(f"Unknown optimizer: {cfg['optimizer']}")
+    base_optimizer = get_optimizer(cfg, params)
+    optimizer = SAM(base_optimizer)
     
     cfg['margin_e0'] = float(cfg['e_margin_coeff'] * np.log(cfg['num_classes']))
 

@@ -2,10 +2,7 @@ import torch
 
 from .utils import replace_bn, count_bn
 from .dynamic_bn import DynamicBN
-from .mecta_bn import MectaBN
-from .mecta_bn_original import MectaNorm2d as MectaBNOrig
-from .AdaMixBN import AdaMixBN
-# from .old_dynamic_bn import DynamicBN
+
 
 def configure_model_bn(cfg, model):
     if cfg['bn_stats'] == 'source':
@@ -22,22 +19,14 @@ def configure_model_bn(cfg, model):
         return model
     elif cfg['bn_stats'] == 'dynamicbn':
         BN_to_inject = DynamicBN
-    elif cfg['bn_stats'] == 'mectabn':
-        BN_to_inject = MectaBN
-    elif cfg['bn_stats'] == 'mectabn_original':
-        BN_to_inject = MectaBNOrig
-    elif cfg['bn_stats'] == 'adamixbn':
-        BN_to_inject = AdaMixBN
     else:
         raise ValueError(f"No such bn stats method: {cfg['bn_stats']}")
         
     print(f"Using {BN_to_inject.__name__} BN statistics!")
     
     n_bn = count_bn(model, torch.nn.BatchNorm2d)
-    n_bn_to_replace = int(n_bn * cfg['fraction_bn_mod'])
     
-    n_repalced = replace_bn(model, BN_to_inject,
-                            number_to_replace=n_bn_to_replace,
+    n_replaced = replace_bn(model, BN_to_inject,
                             beta=cfg['init_beta'],
                             bn_dist_scale=cfg['bn_dist_scale'],
                             smoothing_beta=cfg['smoothing_beta'],
@@ -46,9 +35,9 @@ def configure_model_bn(cfg, model):
                             prune_q=0., # 0.7 for all
                             transform=False
                    )
-    assert n_repalced == n_bn_to_replace, f"Replaced {n_repalced} BNs but you wanted to replace {n_bn_to_replace}. Need to update `replace_bn`."
+    assert n_replaced == n_bn, f"Replaced {n_replaced} BNs but you wanted to replace {n_bn}. Need to update `replace_bn`."
 
     n_bn_inside = count_bn(model, BN_to_inject)
-    assert n_repalced == n_bn_inside, f"Replaced {n_repalced} BNs but actually inserted {n_bn_inside} {BN_to_inject.__name__}."
+    assert n_replaced == n_bn_inside, f"Replaced {n_replaced} BNs but actually inserted {n_bn_inside} {BN_to_inject.__name__}."
     
     return model

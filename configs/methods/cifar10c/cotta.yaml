@@ -8,7 +8,3 @@ mt: 0.999
 rst: 0.01
 ap: 0.92
 nesterov: false
-
-# my modifications:
-distillation_temp: 1 # of ditillation loss of output
-features_distillation: false # distillation on feature level

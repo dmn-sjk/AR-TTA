@@ -3,7 +3,6 @@ from typing import Callable
 import os
 import numpy as np
 import pathlib
-from PIL import Image
 
 
 def load_cifar10_1_dataset(data_dir, version_string='v6'):

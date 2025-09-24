@@ -50,12 +50,10 @@ def main():
         
         print(f"\n{17 * '='} Running seed: {seed} {17 * '='}\n")
 
-        # reload on every seed in case of random thing happening inside
         benchmark = get_benchmark(cfg)
         strategy = get_strategy(cfg)
 
         if cfg['save_results']:
-            # cfg['git_commit'] = get_git_revision_hash()
             save_config(cfg, experiment_name)
 
         if 'wandb' in cfg.keys() and cfg['wandb']:
@@ -77,24 +75,11 @@ def main():
         for i, experience in enumerate(experience_generator(benchmark.train_stream, 
                                                         domains=cfg['domains'],
                                                         domains_to_exp_idx_func=domain_to_experience_idx)):
-            # strategy.train(experience, eval_streams=[benchmark.streams['val']], shuffle=False,
-            #                num_workers=cfg['num_workers)
-
-            # if i == 0:
-            #     print("Initial eval...")
-            #     strategy.eval(benchmark.test_stream[0], num_workers=cfg['num_workers'])
-
             # avalanche cheat for correclty saving results
             experience.current_experience = 0
             strategy.train(experience, eval_streams=[], shuffle=shuffle,
                         num_workers=cfg['num_workers'])
-
-            # print(f"Percentage of used samples: {(strategy.model.num_samples_update / len(experience.dataset)) * 100.0:.2f}")
-            
-            # strategy.model.num_samples_update = 0
-
-            # strategy.eval(benchmark.test_stream[0], num_workers=cfg['num_workers'])
-            
+ 
     evaluate_results(cfg)
         
 def experience_generator(train_stream, domains, domains_to_exp_idx_func):

@@ -8,8 +8,10 @@ from avalanche.benchmarks.scenarios.generic_benchmark_creation import create_mul
 from utils.transforms import get_transforms
 from datasets.cifar10c import CIFAR10CDataset
 from datasets.cifar10_1 import CIFAR101Dataset
+from . import register_benchmark
 
 
+@register_benchmark("cifar10_1")
 def get_cifar10_1_benchmark(cfg) -> GenericCLScenario:
     train_sets = []
     val_sets = []
@@ -20,10 +22,6 @@ def get_cifar10_1_benchmark(cfg) -> GenericCLScenario:
     
     val_sets.append(CIFAR10CDataset(cfg['data_root'], corruption=None, split="test", transforms=transforms_test))
     train_sets.append(CIFAR101Dataset(cfg['data_root'], transforms=transforms_test)) 
-
-    if cfg['end_with_source_domain']:
-        train_sets.append(CIFAR10CDataset(cfg['data_root'], corruption=None, split="test", transforms=transforms_test))
-        cfg['domains'].append('clear')
 
     train_exps_datasets = []
     for i, train_set in enumerate(train_sets):

@@ -13,3 +13,4 @@ wandb/*
 *.pdf
 experiment_data/*
 *.pth
+*.sh

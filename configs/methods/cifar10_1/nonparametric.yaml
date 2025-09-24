@@ -1,4 +1,0 @@
-## mecta:
-bn_dist_scale: 10
-init_beta: 0.1
-smoothing_beta: 0.2

@@ -1,15 +1,13 @@
-from .improved_wandb_logger import ImprovedWandBLogger
 from .json_logger import JSONLogger
 from utils.utils import get_experiment_name, get_experiment_folder, get_seed_folder
 
 from avalanche.logging import TextLogger, InteractiveLogger, WandBLogger, CSVLogger
 from avalanche.evaluation.metrics import accuracy_metrics, loss_metrics, amca_metrics, timing_metrics, EpochClassAccuracy
 from avalanche.training.plugins import EvaluationPlugin
-from torch.nn import Module
 import os
 
 
-def get_eval_plugin(cfg, model: Module = None):
+def get_eval_plugin(cfg):
     loggers = [InteractiveLogger()]
 
     if cfg['save_results']:
@@ -32,11 +30,7 @@ def get_eval_plugin(cfg, model: Module = None):
 
     if cfg['wandb']:
         params = {'group': f"tta_{cfg['dataset']}", 'job_type': f"{cfg['method']}_{cfg['run_name']}"}
-        if model is not None:
-            wandb_logger = ImprovedWandBLogger(model=model, project_name=cfg['project_name'], run_name=cfg['run_name'], config=cfg, 
-                                               params=params)
-        else:
-            wandb_logger = WandBLogger(project_name=cfg['project_name'], run_name=cfg['run_name'], config=cfg, params=params)
+        wandb_logger = WandBLogger(project_name=cfg['project_name'], run_name=cfg['run_name'], config=cfg, params=params)
         loggers.append(wandb_logger)
 
 

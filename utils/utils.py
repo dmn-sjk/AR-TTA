@@ -62,7 +62,7 @@ def set_seed(seed: int) -> None:
     torch.backends.cudnn.deterministic = True
 
 def get_experiment_name(cfg: dict) -> str:
-    return f"{cfg['dataset']}_{cfg['benchmark']}_{cfg['method']}_{cfg['model']}_{cfg['run_name']}"
+    return f"{cfg['dataset']}_{cfg['method']}_{cfg['model']}_{cfg['run_name']}"
 
 def get_experiment_folder(cfg: dict) -> str:
     return os.path.join(cfg['log_dir'], get_experiment_name(cfg))
@@ -102,6 +102,7 @@ def split_up_model(model, model_name, dataset=None, encoder_out_relu_to_classifi
 
     return encoder, classifier
 
+# TODO: merge with split_up_model
 def split_up_model_new(model, model_name, dataset_name: str):
     if "wideresnet" in model_name and dataset_name in {"cifar10", "cifar10c", "cifar10_1"}:
         encoder = nn.Sequential(*list(model.children())[:-1], nn.AvgPool2d(kernel_size=8, stride=8), nn.Flatten())

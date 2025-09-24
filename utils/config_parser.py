@@ -63,12 +63,8 @@ class ConfigParser:
         parser.add_argument('--run_name', type=str, default=None, required=True,
                             help='Name of the run')
         if self.mode == 'tta':
-            parser.add_argument('--benchmark', type=str, default=None, required=True,
-                                help='cifar10c_long | cifar10c_repetitive | cifar10c_standard | cifar10c_random | cifar10c_long_random | \
-                                clad | clad_random | clad_long_random | shift_weather | shift_timeofday | shift_mix | shift_mix_no_source | \
-                                    shift_mix_long_random | shift_mix_random | imagenetc_standard | imagenetc_standard_subset')
             parser.add_argument('--method', type=str, default=None, required=True,
-                                help='frozen | finetune | tent | cotta | eata | sar | custom | bn_stats_adapt')
+                                help='frozen | finetune | tent | cotta | eata | sar | artta | bn_stats_adapt | rmt')
         parser.add_argument('--model', type=str, default=argparse.SUPPRESS,
                             help='name of the model')
         parser.add_argument('--project_name', type=str, default=argparse.SUPPRESS,
@@ -98,34 +94,15 @@ class ConfigParser:
         parser.add_argument('--init_beta', type=float, default=argparse.SUPPRESS,
                             help="Beta for stats ema")
         parser.add_argument('--bn_dist_scale', type=float, default=argparse.SUPPRESS,
-                            help="Scale for distributions distance in MectaBN")
+                            help="Scale for distributions distance in dynamic BN")
         parser.add_argument('--alpha', type=float, default=argparse.SUPPRESS,
                             help="For beta distrib")
         parser.add_argument('--smoothing_beta', type=float, default=argparse.SUPPRESS,
                             help="Coeff for ema beta")
-        parser.add_argument('--distillation_out_temp', type=int, default=argparse.SUPPRESS,
-                            help="Temperature of distillation on output level")
         parser.add_argument('--memory_size', type=int, default=argparse.SUPPRESS,
                             help="Size of class-balanced memory")
-        parser.add_argument('--features_distillation_weight', type=float, default=argparse.SUPPRESS,
-                            help="The weight of distillation on feature level, 0 for no distillation. (Loss = weight * feature_distillation + loss)")
-        parser.add_argument('--memory_per_class', type=int, default=argparse.SUPPRESS,
-                            help="Number of samples per class to save for memory replay")
-        parser.add_argument('--replay_augs', type=str, default=argparse.SUPPRESS,
-                            help='Augmentation strategy for replay')
-        parser.add_argument('--sampling_method', type=str, default=argparse.SUPPRESS,
-                            help='Method of choosing samples for update')
-        parser.add_argument('--update_method', type=str, default=argparse.SUPPRESS,
-                            help='source_pseudolabels | emateacher')
         parser.add_argument('--bn_stats', type=str, default=argparse.SUPPRESS,
-                            help='source | test | dynamicbn | mectabn | mectabn_original | adamixbn')
-        parser.add_argument('--fraction_bn_mod', type=int, default=argparse.SUPPRESS,
-                            help="Fraction of the whole number of BN layers from the shallow layers to modify.\
-                                Method of modification is determined by bn_stats argument")
-        parser.add_argument('--lora_rank', type=float, default=argparse.SUPPRESS,
-                            help="rank of lora")
-        parser.add_argument('--lora', action='store_true',
-                            help="whether to use lora")
+                            help='source | test | dynamicbn')
         parser.add_argument('--rank_mode', type=str, default=argparse.SUPPRESS,
                             help='fixed | threshold | ratio | percentile')
         parser.add_argument('--wandb', action='store_true',

@@ -78,7 +78,7 @@ python train_source.py --data_root /raid/NFS_SHARE/datasets --dataset shift --cu
 
 ## Example tta test:
 ```bash
-python test_adaptation.py --data_root /raid/NFS_SHARE/datasets --save_results --method cotta --dataset shift --benchmark shift_mix --cuda 0 --num_workers 5 --run_name sgd_clear --pretrained_model_path models_checkpoints/shift_wideresnet28_source_size32.pth --model wideresnet28 --batch_size 10
+python test_adaptation.py --data_root /raid/NFS_SHARE/datasets --save_results --method cotta --dataset shift --cuda 0 --num_workers 5 --run_name sgd_clear --pretrained_model_path models_checkpoints/shift_wideresnet28_source_size32.pth --model wideresnet28 --batch_size 10
 ```
 
 ## Evaluation

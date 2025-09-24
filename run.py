@@ -23,20 +23,15 @@ datasets = [
     'imagenetc',
     # 'shift',
     ] # clad, cifar10c, imagenetc, shift
-# datasets = ['cifar10c']
 
-# run_name = 'LoRA_ema'
-# run_name = 'distancesMahaShrinkCovnorm_protoAllDomains'
-# run_name = 'distancesEucl_protoAllDomains_normed'
-# run_name = 'reset'
-# run_name = 'test_maha'
-# run_name = 'NoRep'
-# run_name = 'plot'
 run_name = 'TEST'
 
 
 # all params should be in a form of array, except EXP_NAME 
 configs = {
+    'artta': {
+        'run_name': run_name,
+    },
     # 'rmt': {
     #     'run_name': run_name,
     #     # 'batch_size': [10],
@@ -46,52 +41,6 @@ configs = {
     #     #     'source', 
     #     #     # 'test',
     #     #     ],
-    # },
-    # 'ema_teacher': {
-    #     'run_name': run_name,
-    #     'bn_stats': ['dynamicbn'],
-    #     # 'bn_dist_scale': [100],
-    #     'batch_size': [10],
-    #     # 'lora': [''],
-    #     # 'lora_rank': [4],
-    #     # 'rank_mode': [
-    #     #     # 'percentile', 
-    #     #     # 'ratio',
-    #     #     # 'threshold',
-    #     #     'fixed'
-    #     #     ]
-    # },
-    # 'nonparametric': {
-    #     'run_name': run_name,
-    #     'bn_stats': [
-    #         # 'dynamicbn'
-    #         # 'source', 
-    #         'test',
-    #         ],
-    #     # 'bn_dist_scale': [100],
-    #     'batch_size': [10],
-    # },
-    # 'custom': {
-    #     'run_name': run_name,
-    #     # 'bn_stats': [
-    #     #     # 'dynamicbn',
-    #     #     'source',
-    #     #     # 'test',
-    #     #     ],
-    #     'bn_dist_scale': [
-    #         0.1,
-    #         # 1.0, 
-    #         # 10.0
-    #         ],
-    #     'batch_size': [10],
-    #     'memory_size': [2000],
-    #     # 'replay_augs': [
-    #     #     # 'cotta',
-    #     #     # 'mixup_from_memory',
-    #     #     'null',
-    #     #     ],
-    #     'lr': [1e-3, 0.00025, 0.00003125],
-    #     # 'update_method': ['source_pseudolabels'],
     # },
     # 'frozen': {
     #     'run_name': run_name,
@@ -106,12 +55,6 @@ configs = {
     #     'run_name': run_name,
     #     },
     # # 'bn_stats_adapt': {'run_name': run_name,},
-    
-    'custom': {
-        'run_name': run_name,
-        'memory_size': [0],
-        'replay_augs': ['null']
-    },
     # 'cotta': {
     #     'run_name': run_name,
     #     },
@@ -119,12 +62,7 @@ configs = {
 
 args_to_exp_name = [
     'bn_stats',
-    # 'replay_augs',
-    # 'lora_rank',
-    # 'rank_mode'
     # 'batch_size',
-    # 'update_method',
-    'replay_augs',
     'lr',
     'bn_dist_scale',
     ]
@@ -140,20 +78,15 @@ def main():
 def perform_experiments(dataset):
     usual_args = {}
     if dataset == 'clad':
-        usual_args['benchmark'] = ['clad']
         usual_args['pretrained_model_path'] = ['models_checkpoints/clad_resnet50_size224.pth']
         usual_args['model'] = ['resnet50']
     elif dataset == 'cifar10c':
-        usual_args['benchmark'] = ['cifar10c_standard']
         usual_args['model'] = ['wideresnet28']
     elif dataset == 'cifar10_1':
-        usual_args['benchmark'] = ['cifar10_1_standard']
         usual_args['model'] = ['wideresnet28']
     elif dataset == 'imagenetc':
-        usual_args['benchmark'] = ['imagenetc_standard_subset']
         usual_args['model'] = ['resnet50']
     elif dataset == 'shift':
-        usual_args['benchmark'] = ['shift_mix_no_source']
         usual_args['pretrained_model_path'] = ['models_checkpoints/shift_c_resnet50_size224.pth']
         usual_args['model'] = ['resnet50']
 

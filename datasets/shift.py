@@ -1,5 +1,5 @@
-from shift_dev import SHIFTDataset
-from shift_dev.types import Keys
+from .shift_dev import SHIFTDataset
+from .shift_dev.types import Keys
 import os
 
 

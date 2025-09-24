@@ -1,11 +1,14 @@
 from torch import nn
-
 from strategies.frozen_strategy import FrozenModel
 from avalanche.training.plugins import EvaluationPlugin
 from typing import Sequence
 
+from . import register_strategy
 
+
+@register_strategy("bn_stats_adapt")
 def get_bn_stats_adapt_strategy(cfg, model: nn.Module, eval_plugin: EvaluationPlugin, plugins: Sequence):
+    # TODO:
     # now it is handled before this function so this specific stategy is actually useless now
     # model = configure_model(model)
 

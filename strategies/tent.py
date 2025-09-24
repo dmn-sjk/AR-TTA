@@ -100,11 +100,8 @@ def load_model_and_optimizer(model, optimizer, model_state, optimizer_state):
 
 def configure_model(model):
     """Configure model for use with tent."""
-    # train mode, because tent optimizes the model to minimize entropy
     model.train()
-    # disable grad, to (re-)enable only what tent updates
     model.requires_grad_(False)
-    # configure norm for tent updates: enable grad + force batch statisics
     for m in model.modules():
         if isinstance(m, nn.BatchNorm2d):
             m.requires_grad_(True)

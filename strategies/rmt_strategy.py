@@ -1,25 +1,20 @@
 from avalanche.training.plugins import EvaluationPlugin
-from strategies.adapt_turnoff_plugin import AdaptTurnoffPlugin
+from utils.adapt_turnoff_plugin import AdaptTurnoffPlugin
 from typing import Sequence
 import torch
 
 import strategies.rmt as rmt
 from strategies.frozen_strategy import FrozenModel
+from . import register_strategy
+from utils.optim import get_optimizer
 
 
+@register_strategy("rmt")
 def get_rmt_strategy(cfg, model: torch.nn.Module, eval_plugin: EvaluationPlugin, plugins: Sequence):
     model = rmt.configure_model(model)
     params, param_names = rmt.collect_params(model)
-
-    if cfg['optimizer'] == 'adam':
-        optimizer = torch.optim.Adam(params,
-                                    lr=cfg['lr'],
-                                    betas=(cfg['beta'], 0.999),
-                                    weight_decay=cfg['weight_decay'])
-    elif cfg['optimizer'] == 'sgd':
-        optimizer = torch.optim.SGD(params, lr=cfg['lr'], momentum=0.9, nesterov=cfg['nesterov'])
-    else:
-        raise ValueError(f"Unknown optimizer: {cfg['optimizer']}")
+    
+    optimizer = get_optimizer(cfg, params)
 
     cotted_model = rmt.RMT(model, optimizer, cfg,
                        steps=cfg['steps'],

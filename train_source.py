@@ -19,9 +19,9 @@ from utils.config_parser import ConfigParser
 from utils.utils import set_seed
 from datasets.shift import SHIFTClassificationDataset
 from datasets.cifar10c import CIFAR10CDataset
-import clad
-from shift_dev.types import WeathersCoarse, TimesOfDayCoarse
-from shift_dev.utils.backend import ZipBackend
+from datasets import clad
+from datasets.shift_dev.types import WeathersCoarse, TimesOfDayCoarse
+from datasets.shift_dev.utils.backend import ZipBackend
 
 
 def main():

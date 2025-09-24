@@ -1,25 +1,20 @@
 from avalanche.training.plugins import EvaluationPlugin
-from strategies.adapt_turnoff_plugin import AdaptTurnoffPlugin
+from utils.adapt_turnoff_plugin import AdaptTurnoffPlugin
 from typing import Sequence
 import torch
 
 import strategies.cotta as cotta
 from strategies.frozen_strategy import FrozenModel
+from . import register_strategy
+from utils.optim import get_optimizer
 
 
+@register_strategy("cotta")
 def get_cotta_strategy(cfg, model: torch.nn.Module, eval_plugin: EvaluationPlugin, plugins: Sequence):
     model = cotta.configure_model(model)
     params, param_names = cotta.collect_params(model)
-
-    if cfg['optimizer'] == 'adam':
-        optimizer = torch.optim.Adam(params,
-                                    lr=cfg['lr'],
-                                    betas=(cfg['beta'], 0.999),
-                                    weight_decay=cfg['weight_decay'])
-    elif cfg['optimizer'] == 'sgd':
-        optimizer = torch.optim.SGD(params, lr=cfg['lr'], momentum=0.9, nesterov=cfg['nesterov'])
-    else:
-        raise ValueError(f"Unknown optimizer: {cfg['optimizer']}")
+    
+    optimizer = get_optimizer(cfg, params)
 
     cotted_model = cotta.CoTTA(model, optimizer,
                        steps=cfg['steps'],
@@ -27,9 +22,7 @@ def get_cotta_strategy(cfg, model: torch.nn.Module, eval_plugin: EvaluationPlugi
                        mt_alpha=cfg['mt'],
                        rst_m=cfg['rst'],
                        ap=cfg['ap'],
-                       img_size=cfg['img_size'],
-                       distillation_temp=cfg['distillation_temp'],
-                       features_distillation=cfg['features_distillation'])
+                       img_size=cfg['img_size'])
 
     plugins.append(AdaptTurnoffPlugin())
 

@@ -3,8 +3,7 @@ from typing import Callable
 import os
 import numpy as np
 
-from constants.corrupted import SEVERITIES, CORRUPTIONS
-
+from constants.corrupted import SEVERITIES, CORRUPTIONS_SEQ
 
 
 class CIFAR10CDataset(torch.utils.data.Dataset):
@@ -30,7 +29,7 @@ class CIFAR10CDataset(torch.utils.data.Dataset):
             if severity not in SEVERITIES:
                 raise ValueError("Severity level unavailable")
 
-            if corruption not in CORRUPTIONS and corruption is not None:
+            if corruption not in CORRUPTIONS_SEQ and corruption is not None:
                 raise ValueError(f"Unknown corruption: {corruption}")
             
             if corruption is None:

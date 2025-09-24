@@ -1,7 +1,4 @@
-benchmark: cifar10c_standard
 dataset: cifar10c
 batch_size: 10
-end_with_source_domain: false
 
-fraction_bn_mod: 1.0
 bn_stats: test
