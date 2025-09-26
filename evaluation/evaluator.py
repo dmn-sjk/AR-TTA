@@ -25,12 +25,15 @@ class Evaluator:
         self.num_correct_per_class += _num_correct_per_class
         self.num_samples_per_class += _num_samples_per_class
         
-        return acc, per_class_acc
+        mca = per_class_acc.nanmean()
+        return acc, mca, per_class_acc
     
     def get_summary(self):
         overall_acc = (self.num_correct / self.num_samples) * 100.0
         overall_acc_per_class = (self.num_correct_per_class / self.num_samples_per_class) * 100.0
-        return overall_acc, overall_acc_per_class
+        mca = overall_acc_per_class.nanmean()
+        return overall_acc, mca, overall_acc_per_class, \
+            self.num_samples, self.num_correct, self.num_samples_per_class, self.num_correct_per_class
 
     def reset(self):
         self.num_correct = 0

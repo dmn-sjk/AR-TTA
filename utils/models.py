@@ -34,8 +34,8 @@ def get_model(cfg):
 
     if 'pretrained_model_path' in cfg.keys():
         model.load_state_dict(torch.load(cfg['pretrained_model_path']))
+    # TODO: fix the pretrained_model_path and model_ckpt_dir args
     
-    # model = configure_model_bns(cfg, model)
     model = model.to(cfg['device'])
     model.eval()
 

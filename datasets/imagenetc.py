@@ -8,9 +8,7 @@ from PIL import Image
 from torchvision.transforms.functional import pil_to_tensor
 from torchvision import transforms
 
-from constants.corrupted import SEVERITIES, CORRUPTIONS_SEQ
-
-
+from datasets.domains import SEVERITIES, CORRUPTIONS_SEQ
 
 class ImageNetCDataset(torch.utils.data.Dataset):
     NUM_CLASSES = 1000

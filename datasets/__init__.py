@@ -39,9 +39,10 @@ def get_test_dataloader(cfg, domain_dict: dict):
                                         **domain_dict)
         shuffle = False
     elif cfg['dataset'] == 'clad':
-        raise NotImplementedError
-        # TODO:
-        data = clad.cladc_avalanche(cfg["data_root"], test_transform=transforms_test, train_trasform=transforms_test, img_size=cfg["img_size"])
+        data = clad.get_cladc_single_train_task(cfg["data_root"],
+                                                transform=transforms_test, 
+                                                img_size=cfg["img_size"],
+                                                **domain_dict)
         shuffle = False
     elif cfg['dataset'] == 'cifar10_1':
         data = CIFAR101Dataset(cfg['data_root'], transforms=transforms_test)
@@ -70,7 +71,9 @@ def get_source_dataset(cfg, train_split: bool = True):
                                                     backend=ZipBackend(),
                                                     classification_img_size=cfg['img_size'])
     elif cfg['dataset'] == 'clad':
-        dataset = clad.get_cladc_train(cfg['data_root'], transform=None, sequence_type='source')[0]
+        dataset = clad.get_cladc_single_train_task(cfg['data_root'], 
+                                                   task_id=0, 
+                                                   transform=None)
 
         with open("datasets/clad_val_idxs.pkl", "rb") as f: 
             val_idxs = pickle.load(f)

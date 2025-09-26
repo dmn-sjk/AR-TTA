@@ -3,8 +3,11 @@
 import itertools
 import subprocess
 from copy import deepcopy
+import os
 
 # /* TO MODIFY ---------------------------------------------
+
+CKPTS_DIR = 'models_checkpoints'
 
 # SHIFT:
 # shift_c_resnet50_size224.pth
@@ -17,9 +20,9 @@ from copy import deepcopy
 # clad_resnet50_size224_seed1236.pth
 
 datasets = [
-    'cifar10c',
+    # 'cifar10c',
     # 'cifar10_1',
-    # 'clad',
+    'clad',
     # 'imagenetc',
     # 'shift',
     ] # clad, cifar10c, imagenetc, shift
@@ -31,28 +34,30 @@ run_name = 'TEST_CLEAR'
 configs = {
     'artta': {
         'run_name': run_name,
+        'pretrained_model_path': ['models_checkpoints/clad_resnet50_size224_seed1236.pth']
     },
-    'rmt': {
-        'run_name': run_name,
-    },
-    'source': {
-        'run_name': run_name,
-        },
-    'eata': {
-        'run_name': run_name,
-        },
-    'tent': {
-        'run_name': run_name,
-        },
-    'sar': {
-        'run_name': run_name,
-        },
-    'bn_1': {
-        'run_name': run_name,
-        },
-    'cotta': {
-        'run_name': run_name,
-        },
+    # 'rmt': {
+    #     'run_name': run_name,
+    # },
+    # 'source': {
+    #     'run_name': run_name,
+    #     'pretrained_model_path': ['models_checkpoints/clad_resnet50_size224_seed1236.pth']
+    #     },
+    # 'eata': {
+    #     'run_name': run_name,
+    #     },
+    # 'tent': {
+    #     'run_name': run_name,
+    #     },
+    # 'sar': {
+    #     'run_name': run_name,
+    #     },
+    # 'bn_1': {
+    #     'run_name': run_name,
+    #     },
+    # 'cotta': {
+    #     'run_name': run_name,
+    #     },
 }
 
 args_to_exp_name = [
@@ -63,8 +68,8 @@ args_to_exp_name = [
     ]
 
 common_args = '--data_root /datasets --save_results --cuda 0 --num_workers 5 \
-    --seeds 1235,1236'
-    # --seeds 1234
+    --seeds 1236'
+    # --seeds 1235,1236'
 
 # TO MODIFY */ ---------------------------------------------
 
@@ -75,7 +80,7 @@ def main():
 def perform_experiments(dataset):
     usual_args = {}
     if dataset == 'clad':
-        usual_args['pretrained_model_path'] = ['models_checkpoints/clad_resnet50_size224.pth']
+        usual_args['pretrained_model_path'] = [os.path.join(CKPTS_DIR, 'clad_resnet50_size224.pth')]
         usual_args['model'] = ['resnet50']
     elif dataset == 'cifar10c':
         usual_args['model'] = ['wideresnet28']
@@ -84,7 +89,7 @@ def perform_experiments(dataset):
     elif dataset == 'imagenetc':
         usual_args['model'] = ['resnet50']
     elif dataset == 'shift':
-        usual_args['pretrained_model_path'] = ['models_checkpoints/shift_c_resnet50_size224.pth']
+        usual_args['pretrained_model_path'] = [os.path.join(CKPTS_DIR, 'shift_c_resnet50_size224.pth')]
         usual_args['model'] = ['resnet50']
 
     # add usual args to the arguments if they are not already in
@@ -92,6 +97,8 @@ def perform_experiments(dataset):
     for method in configs.keys():
         for arg in usual_args.keys():
             if arg not in configs[method].keys():
+                # TODO: set correct checkpoint depending on the seed
+                
                 tmp_configs[method][arg] = usual_args[arg]
 
     for method, params in tmp_configs.items():

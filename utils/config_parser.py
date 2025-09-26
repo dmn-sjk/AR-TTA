@@ -111,8 +111,6 @@ class ConfigParser:
                             help="param for various tests")
         parser.add_argument('--save_results', action='store_true',
                             help="Save results")
-        parser.add_argument('--watch_model', action='store_true',
-                            help="Log model state in wandb")
         return parser.parse_args()
 
     def _overwrite_config_with_args(self, config: Dict, args: argparse.Namespace) -> Dict:

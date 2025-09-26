@@ -1,2 +1,0 @@
-from .corrupted import SEVERITIES, CORRUPTIONS_SEQ
-from .shift import WEATHERS_SEQUENCE, TIMEOFDAY_SEQUENCE

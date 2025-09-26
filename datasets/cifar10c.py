@@ -3,7 +3,7 @@ from typing import Callable
 import os
 import numpy as np
 
-from constants.corrupted import SEVERITIES, CORRUPTIONS_SEQ
+from datasets.domains import SEVERITIES, CORRUPTIONS_SEQ
 
 
 class CIFAR10CDataset(torch.utils.data.Dataset):

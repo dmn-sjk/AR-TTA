@@ -14,7 +14,7 @@ def get_domain_sequence(cfg):
                 domain_seq.append(ShiftDomain(timeofday, weather))
         return domain_seq
     elif cfg['dataset'] == 'clad':
-        return [CladDomain(i) for i in range(5)]
+        return [CladDomain(i) for i in range(1, 6)]
     elif cfg['dataset'] == 'cifar10_1':
         return [DummyDomain()]
     else:
@@ -105,7 +105,7 @@ class CladDomain(Domain):
         return f"T{self.num}"
 
     def get_domain_dict(self):
-        return {'domain_number': self.num}
+        return {'task_id': self.num}
 
 class DummyDomain(Domain):
     def __str__(self):

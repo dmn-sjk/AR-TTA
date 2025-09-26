@@ -7,6 +7,7 @@ from utils.config_parser import ConfigParser
 from datasets import get_test_dataloader
 from datasets.domains import get_domain_sequence
 from evaluation.eval import eval_domain
+from evaluation.evaluator import Evaluator
 from evaluation.tensorboard_logger import TensorBoardLogger
 from evaluation.eval_seeds import eval_seeds
 from methods import get_method
@@ -46,20 +47,26 @@ def main():
         log_dir = get_seed_folder(cfg)
         logger = TensorBoardLogger(os.path.join(log_dir, 'tb'))
 
-        accs = []
-        accs_per_class = []
+        mcas = []
+        evaluator = Evaluator(cfg)
+        
         for i, domain in enumerate(domains):
             dataloader = get_test_dataloader(cfg, domain.get_domain_dict())
-            acc, acc_per_class = eval_domain(cfg, model, dataloader, logger)
+            acc, mca, acc_per_class, num_samples, num_correct, \
+                num_samples_per_class, num_correct_per_class = eval_domain(cfg, model, dataloader, logger)
             print(f"\n{domain} accuracy: {acc:.1f}")
-            print(f"{domain} per-class accuracy: {acc_per_class}")
-    
-            accs.append(acc)
-            accs_per_class.append(acc_per_class)
+            print(f"{domain} MCA: {mca:.1f}")
+            print(f"{domain} per-class accuracy: {[f'{acc:.1f}' for acc in acc_per_class.tolist()]}")
+            
+            evaluator.num_samples += num_samples
+            evaluator.num_correct += num_correct
+            evaluator.num_samples_per_class += num_samples_per_class
+            evaluator.num_correct_per_class += num_correct_per_class
+            mcas.append(mca)
         
-        acc_per_class = torch.stack(accs_per_class).mean(0)
-        overall_acc = torch.stack(accs).mean().item()
-        amca = acc_per_class.mean().item()
+        amca = torch.stack(mcas).nanmean().item()
+        overall_acc, _, acc_per_class, _, _, _, _ = evaluator.get_summary()
+        overall_acc = overall_acc.item()
 
         log_dict = {f'acc_class_{i}': acc_per_class[i].item() for i in range(cfg['num_classes'])}
         log_dict['acc'] = overall_acc
@@ -67,7 +74,7 @@ def main():
         logger.log_scalars('overall', log_dict)
 
         print(f"\nOverall accuracy: {overall_acc:.1f}")
-        print(f"Overall per-class accuracy: {acc_per_class}")
+        print(f"Overall per-class accuracy: {[f'{acc:.1f}' for acc in acc_per_class.tolist()]}")
         print(f"AMCA: {amca:.1f}")
 
         overall_results_path = os.path.join(log_dir, 'overall.yaml')
@@ -84,7 +91,7 @@ def main():
     print('='*30)
     print(f"Seed-averaged accuracy: {acc:.1f}")
     print(f"Seed-averaged AMCA: {amca:.1f}")
-    print(f"Averaged over {num_seeds} seeds")
+    print(f"Averaged over {num_seeds} {'seeds' if num_seeds > 1 else 'seed'}.")
     print('='*30)
         
     overall_results_path = os.path.join(log_dir, 'overall.yaml')
