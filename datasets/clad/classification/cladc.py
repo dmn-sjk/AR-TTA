@@ -4,13 +4,13 @@ from torch.utils.data import ConcatDataset
 from avalanche.benchmarks.utils import make_classification_dataset
 
 
-def get_cladc_train(root: str, transform: Callable = None, img_size: int = 64, avalanche: bool = False, sequence_type: str = "source") -> Sequence[CladClassification]:
+def get_cladc_train(root: str, transform: Callable = None, img_size: int = 224, avalanche: bool = False, sequence_type: str = "source") -> Sequence[CladClassification]:
     """
     Returns a sequence of training sets that are chronologically ordered, defined as in the ICCV '21 challenge.
 
     :param root: root path to the dataset
     :param transform: a callable transformation for the data images
-    :param img_size: the width/height of the images, default is 64 by 64.
+    :param img_size: the width/height of the images, default is 224 by 224.
     :param avalanche: If true, this will return AvalancheDataset objects.
     :param sequence_type: 'source', 'tta' or 'all'
     """

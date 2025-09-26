@@ -2,8 +2,10 @@
 # https://arxiv.org/pdf/2109.08191v1.pdf
 import torch
 import torchvision.transforms.functional as F
+import torchvision.transforms as transforms
 from torchvision.transforms import ColorJitter, Compose, Lambda
 from numpy import random
+import PIL
 
 class GaussianNoise(torch.nn.Module):
     def __init__(self, mean=0., std=1.):
@@ -123,3 +125,37 @@ class ColorJitterPro(ColorJitter):
         format_string += ', hue={0})'.format(self.hue)
         format_string += ', gamma={0})'.format(self.gamma)
         return format_string
+
+def get_tta_transforms(gaussian_std: float=0.005, soft=False, clip_inputs=False, img_size: int=64):
+    img_shape = (img_size, img_size, 3)
+    n_pixels = img_shape[0]
+
+    clip_min, clip_max = 0.0, 1.0
+
+    p_hflip = 0.5
+
+    tta_transforms = transforms.Compose([
+        Clip(0.0, 1.0), 
+        ColorJitterPro(
+            brightness=[0.8, 1.2] if soft else [0.6, 1.4],
+            contrast=[0.85, 1.15] if soft else [0.7, 1.3],
+            saturation=[0.75, 1.25] if soft else [0.5, 1.5],
+            hue=[-0.03, 0.03] if soft else [-0.06, 0.06],
+            gamma=[0.85, 1.15] if soft else [0.7, 1.3]
+        ),
+        transforms.Pad(padding=int(n_pixels / 2), padding_mode='edge'),  
+        transforms.RandomAffine(
+            degrees=[-8, 8] if soft else [-15, 15],
+            translate=(1/16, 1/16),
+            scale=(0.95, 1.05) if soft else (0.9, 1.1),
+            shear=None,
+            interpolation=PIL.Image.BILINEAR,
+            fill=None
+        ),
+        transforms.GaussianBlur(kernel_size=5, sigma=[0.001, 0.25] if soft else [0.001, 0.5]),
+        transforms.CenterCrop(size=n_pixels),
+        transforms.RandomHorizontalFlip(p=p_hflip),
+        GaussianNoise(0, gaussian_std),
+        Clip(clip_min, clip_max)
+    ])
+    return tta_transforms

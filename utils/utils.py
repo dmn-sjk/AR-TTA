@@ -91,6 +91,8 @@ def save_config(cfg, experiment_name):
     temp_cfg = copy(cfg)
     del temp_cfg['domains']
     
+    os.makedirs(get_seed_folder(cfg), exist_ok = True)
+    
     if cfg['curr_seed'] is not None:
         with open(os.path.join(get_seed_folder(cfg), 'domains.yaml'), 'w') as f:
             yaml.dump(cfg['domains'], f, default_flow_style=False)

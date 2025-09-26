@@ -1,30 +1,29 @@
 from torch import nn
-from .dynamic_bn import DynamicBN
 
 
-def configure_model_bns(cfg, model):
-    if cfg['bn_stats'] == 'source':
-        print("Using source BN statistics!")
-        return model
-    elif cfg['bn_stats'] == 'test':
-        print("Using test BN statistics!")
-        for m in model.modules():
-            if isinstance(m, nn.BatchNorm2d):
-                # force use of batch stats in train and eval modes
-                m.track_running_stats = False
-                m.running_mean = None
-                m.running_var = None
-        return model
-    elif cfg['bn_stats'] == 'dynamicbn':
-        BN_to_inject = DynamicBN
-    else:
-        raise ValueError(f"No such bn stats method: {cfg['bn_stats']}")
+def replace_bns(cfg, model, BN_to_inject: nn.BatchNorm2d):
+    # if cfg['bn_stats'] == 'source':
+    #     print("Using source BN statistics!")
+    #     return model
+    # elif cfg['bn_stats'] == 'test':
+    #     print("Using test BN statistics!")
+    #     for m in model.modules():
+    #         if isinstance(m, nn.BatchNorm2d):
+    #             # force use of batch stats in train and eval modes
+    #             m.track_running_stats = False
+    #             m.running_mean = None
+    #             m.running_var = None
+    #     return model
+    # elif cfg['bn_stats'] == 'dynamicbn':
+    #     BN_to_inject = DynamicBN
+    # else:
+    #     raise ValueError(f"No such bn stats method: {cfg['bn_stats']}")
         
     print(f"Using {BN_to_inject.__name__} BN statistics!")
     
-    n_bn = count_bn(model, nn.BatchNorm2d)
+    n_bn = _count_bn(model, nn.BatchNorm2d)
     
-    n_replaced = replace_bn(model, BN_to_inject,
+    n_replaced = _replace_bn(model, BN_to_inject,
                             beta=cfg['init_beta'],
                             bn_dist_scale=cfg['bn_dist_scale'],
                             smoothing_beta=cfg['smoothing_beta'],
@@ -35,12 +34,12 @@ def configure_model_bns(cfg, model):
                    )
     assert n_replaced == n_bn, f"Replaced {n_replaced} BNs but you wanted to replace {n_bn}. Need to update `replace_bn`."
 
-    n_bn_inside = count_bn(model, BN_to_inject)
+    n_bn_inside = _count_bn(model, BN_to_inject)
     assert n_replaced == n_bn_inside, f"Replaced {n_replaced} BNs but actually inserted {n_bn_inside} {BN_to_inject.__name__}."
     
     return model
 
-def replace_bn(model: nn.Module, BN_module: nn.Module, **abn_kwargs):
+def _replace_bn(model: nn.Module, BN_module: nn.Module, **abn_kwargs):
     copy_keys = ['eps', 'momentum', 'affine']
     n_replaced = 0
     for mod_name, target_mod in model.named_children():
@@ -57,11 +56,11 @@ def replace_bn(model: nn.Module, BN_module: nn.Module, **abn_kwargs):
             new_mod.track_running_stats = False
             setattr(model, mod_name, new_mod)
         else:
-            n_replaced += replace_bn(
+            n_replaced += _replace_bn(
                 target_mod, BN_module, **abn_kwargs)
     return n_replaced
 
-def count_bn(model: nn.Module, BN_module):
+def _count_bn(model: nn.Module, BN_module):
     cnt = 0
     for _, m in model.named_modules():
         if isinstance(m, BN_module):

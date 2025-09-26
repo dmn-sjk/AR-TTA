@@ -24,7 +24,6 @@ class DynamicBN(BatchNorm2d):
         self.name = name
 
         self.beta = beta
-        # self.beta = torch.nn.Parameter(torch.Tensor([beta]), requires_grad=True)
 
         self.bn_dist_scale = bn_dist_scale
         self.dist_metric = gauss_symm_kl_divergence
@@ -89,22 +88,4 @@ class DynamicBN(BatchNorm2d):
                 self.running_var.data.copy_(batch_var)
             
         return super(DynamicBN, self).forward(input)
-            
-            # if self.beta < 0:
-            #     self.beta.data = torch.Tensor([0]).to(self.beta.device)
-            # if self.beta > 1:
-            #     self.beta.data = torch.Tensor([1]).to(self.beta.device)
-                
-            # self.running_mean = self.saved_running_mean.mul((1-self.beta)).add_(batch_mean.mul(self.beta))
-            # self.running_var = self.saved_running_var.mul((1-self.beta)).add_(batch_var.mul(self.beta))
-            
-            # input = (input - self.running_mean[None, :, None, None]) / (torch.sqrt(self.running_var[None, :, None, None] + self.eps))
-            # if self.affine:
-            #     input = input * self.weight[None, :, None, None] + self.bias[None, :, None, None]
-
-            # self.running_mean = self.running_mean.detach()
-            # self.running_var = self.running_var.detach()
-            # self.saved_running_mean = self.saved_running_mean.detach()
-            # self.saved_running_var = self.saved_running_var.detach()
-
-            # return input
+ 

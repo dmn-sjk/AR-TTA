@@ -17,14 +17,14 @@ from copy import deepcopy
 # clad_resnet50_size224_seed1236.pth
 
 datasets = [
-    # 'cifar10c',
+    'cifar10c',
     # 'cifar10_1',
     # 'clad',
-    'imagenetc',
+    # 'imagenetc',
     # 'shift',
     ] # clad, cifar10c, imagenetc, shift
 
-run_name = 'TEST'
+run_name = 'TEST_CLEAR'
 
 
 # all params should be in a form of array, except EXP_NAME 
@@ -32,32 +32,27 @@ configs = {
     'artta': {
         'run_name': run_name,
     },
-    # 'rmt': {
-    #     'run_name': run_name,
-    #     # 'batch_size': [10],
-    #     # 'lr': [1e-3, 0.00025, 0.00003125],
-    #     # 'bn_stats': [
-    #     #     # 'dynamicbn'
-    #     #     'source', 
-    #     #     # 'test',
-    #     #     ],
-    # },
-    # 'frozen': {
-    #     'run_name': run_name,
-    #     },
-    # 'eata': {
-    #     'run_name': run_name,
-    #     },
-    # 'tent': {
-    #     'run_name': run_name,
-    #     },
-    # 'sar': {
-    #     'run_name': run_name,
-    #     },
-    # # 'bn_stats_adapt': {'run_name': run_name,},
-    # 'cotta': {
-    #     'run_name': run_name,
-    #     },
+    'rmt': {
+        'run_name': run_name,
+    },
+    'source': {
+        'run_name': run_name,
+        },
+    'eata': {
+        'run_name': run_name,
+        },
+    'tent': {
+        'run_name': run_name,
+        },
+    'sar': {
+        'run_name': run_name,
+        },
+    'bn_1': {
+        'run_name': run_name,
+        },
+    'cotta': {
+        'run_name': run_name,
+        },
 }
 
 args_to_exp_name = [
@@ -67,7 +62,9 @@ args_to_exp_name = [
     'bn_dist_scale',
     ]
 
-common_args = '--data_root /datasets --save_results --cuda 0 --num_workers 5 --seeds 1234'
+common_args = '--data_root /datasets --save_results --cuda 0 --num_workers 5 \
+    --seeds 1235,1236'
+    # --seeds 1234
 
 # TO MODIFY */ ---------------------------------------------
 

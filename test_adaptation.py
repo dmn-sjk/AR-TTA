@@ -1,11 +1,15 @@
 import torch
+import os
+import yaml
 
-from utils.utils import set_seed, get_experiment_name, get_experiment_folder, get_git_revision_hash, save_config
+from utils.utils import get_experiment_folder, set_seed, get_experiment_name, save_config, get_seed_folder
 from utils.config_parser import ConfigParser
-from benchmarks import get_benchmark
-from strategies import get_strategy
-from utils.evaluation import evaluate_results
-import wandb
+from datasets import get_test_dataloader
+from datasets.domains import get_domain_sequence
+from evaluation.eval import eval_domain
+from evaluation.tensorboard_logger import TensorBoardLogger
+from evaluation.eval_seeds import eval_seeds
+from methods import get_method
 
 
 def main():
@@ -17,26 +21,6 @@ def main():
     
     experiment_name = get_experiment_name(cfg)
     print(f"\n{(len(experiment_name) + 17) * '='}\nExperiment name: {experiment_name}\n{(len(experiment_name) + 17) * '='}\n")
-
-
-    if cfg['dataset'] == 'cifar10c':
-        shuffle = True
-        from benchmarks.cifar10c import domain_to_experience_idx
-    elif cfg['dataset'] == 'cifar10_1':
-        shuffle = True
-        from benchmarks.cifar10_1 import domain_to_experience_idx
-    elif cfg['dataset'] == 'imagenetc':
-        shuffle = True
-        from benchmarks.imagenetc import domain_to_experience_idx
-    elif cfg['dataset'] == 'clad':
-        shuffle = False
-        from benchmarks.cladc import domain_to_experience_idx
-    elif cfg['dataset'] == 'shift':
-        shuffle = False
-        from benchmarks.shift import domain_to_experience_idx
-    else:
-        raise ValueError(f"Unknown dataset: {cfg['dataset']}")
-
 
     seeds = [None]
     if 'seeds' in cfg.keys() and len(cfg['seeds']) > 0:
@@ -50,47 +34,66 @@ def main():
         
         print(f"\n{17 * '='} Running seed: {seed} {17 * '='}\n")
 
-        benchmark = get_benchmark(cfg)
-        strategy = get_strategy(cfg)
+        # benchmark = get_benchmark(cfg)
+        domains = get_domain_sequence(cfg)
+        cfg['domains'] = domains
+        # strategy = get_strategy(cfg)
+        model = get_method(cfg)
 
         if cfg['save_results']:
             save_config(cfg, experiment_name)
 
-        if 'wandb' in cfg.keys() and cfg['wandb']:
-            if wandb.run is not None:
-                wandb.finish()
-            
-            job_type = f"{cfg['method']}_{cfg['model']}_{cfg['run_name']}"
-            # Wandb's 64 letters limit
-            if len(job_type) > 64:
-                job_type = job_type[:64]
-            wandb.init(project=cfg['project_name'],
-                name='seed' + str(seed),
-                job_type=job_type,
-                group=cfg['dataset'] + '_TTA',
-                config=cfg,
-                resume="allow")
+        log_dir = get_seed_folder(cfg)
+        logger = TensorBoardLogger(os.path.join(log_dir, 'tb'))
 
-
-        for i, experience in enumerate(experience_generator(benchmark.train_stream, 
-                                                        domains=cfg['domains'],
-                                                        domains_to_exp_idx_func=domain_to_experience_idx)):
-            # avalanche cheat for correclty saving results
-            experience.current_experience = 0
-            strategy.train(experience, eval_streams=[], shuffle=shuffle,
-                        num_workers=cfg['num_workers'])
- 
-    evaluate_results(cfg)
+        accs = []
+        accs_per_class = []
+        for i, domain in enumerate(domains):
+            dataloader = get_test_dataloader(cfg, domain.get_domain_dict())
+            acc, acc_per_class = eval_domain(cfg, model, dataloader, logger)
+            print(f"\n{domain} accuracy: {acc:.1f}")
+            print(f"{domain} per-class accuracy: {acc_per_class}")
+    
+            accs.append(acc)
+            accs_per_class.append(acc_per_class)
         
-def experience_generator(train_stream, domains, domains_to_exp_idx_func):
-    if domains_to_exp_idx_func is not None:
-        for domain in domains:
-            idx = domains_to_exp_idx_func(domain)
-            yield train_stream[idx]
+        acc_per_class = torch.stack(accs_per_class).mean(0)
+        overall_acc = torch.stack(accs).mean().item()
+        amca = acc_per_class.mean().item()
 
-    else:
-        for exp in train_stream:
-            yield exp
+        log_dict = {f'acc_class_{i}': acc_per_class[i].item() for i in range(cfg['num_classes'])}
+        log_dict['acc'] = overall_acc
+        log_dict['amca'] = amca
+        logger.log_scalars('overall', log_dict)
 
+        print(f"\nOverall accuracy: {overall_acc:.1f}")
+        print(f"Overall per-class accuracy: {acc_per_class}")
+        print(f"AMCA: {amca:.1f}")
+
+        overall_results_path = os.path.join(log_dir, 'overall.yaml')
+        overall_res_dict = {
+            'overall_acc': overall_acc,
+            'AMCA': amca
+        }
+        with open(overall_results_path, 'w') as f:
+            yaml.safe_dump(overall_res_dict, f, default_flow_style=False)
+    
+    log_dir = get_experiment_folder(cfg)
+    acc, amca, num_seeds = eval_seeds(log_dir)
+    print('\n')
+    print('='*30)
+    print(f"Seed-averaged accuracy: {acc:.1f}")
+    print(f"Seed-averaged AMCA: {amca:.1f}")
+    print(f"Averaged over {num_seeds} seeds")
+    print('='*30)
+        
+    overall_results_path = os.path.join(log_dir, 'overall.yaml')
+    overall_res_dict = {
+        'overall_acc': acc,
+        'AMCA': amca
+    }
+    with open(overall_results_path, 'w') as f:
+        yaml.safe_dump(overall_res_dict, f, default_flow_style=False)
+        
 if __name__ == '__main__':
     main()
