@@ -28,6 +28,8 @@ class CladClassification(torch.utils.data.Dataset):
     :param meta: an optional user-defined str for the current set, usefull if objects are all from the same domain.
     """
 
+    NUM_CLASSES = 6
+
     _default_transform = torchvision.transforms.Compose([
         torchvision.transforms.ToTensor(),
         # torchvision.transforms.Normalize((0.3252, 0.3283, 0.3407), (0.0265, 0.0241, 0.0252))

@@ -2,23 +2,6 @@ from torch import nn
 
 
 def replace_bns(cfg, model, BN_to_inject: nn.BatchNorm2d):
-    # if cfg['bn_stats'] == 'source':
-    #     print("Using source BN statistics!")
-    #     return model
-    # elif cfg['bn_stats'] == 'test':
-    #     print("Using test BN statistics!")
-    #     for m in model.modules():
-    #         if isinstance(m, nn.BatchNorm2d):
-    #             # force use of batch stats in train and eval modes
-    #             m.track_running_stats = False
-    #             m.running_mean = None
-    #             m.running_var = None
-    #     return model
-    # elif cfg['bn_stats'] == 'dynamicbn':
-    #     BN_to_inject = DynamicBN
-    # else:
-    #     raise ValueError(f"No such bn stats method: {cfg['bn_stats']}")
-        
     print(f"Using {BN_to_inject.__name__} BN statistics!")
     
     n_bn = _count_bn(model, nn.BatchNorm2d)

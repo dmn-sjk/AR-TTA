@@ -7,7 +7,7 @@ and https://github.com/ptrblck/pytorch_misc/blob/master/batch_norm_manual.py.
 from typing import Any, Mapping
 import torch
 from torch.nn.modules.batchnorm import BatchNorm2d
-from utils.utils import gauss_symm_kl_divergence
+from utils.math import gauss_symm_kl_divergence
 
 
 class DynamicBN(BatchNorm2d):

@@ -15,6 +15,8 @@ class _SHIFTClassificationTargets:
 
 
 class SHIFTClassificationDataset(SHIFTDataset):
+    NUM_CLASSES = 6
+
     def __init__(self, data_root, transforms = None, **kwargs) -> None:
         data_root = os.path.join(data_root, "shift")
         self.transforms = transforms

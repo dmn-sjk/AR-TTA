@@ -3,6 +3,8 @@ import os
 import argparse
 from typing import Dict
 
+from methods import _METHODS
+
 
 class ConfigParser:
     """
@@ -35,14 +37,10 @@ class ConfigParser:
     def _read_config(self, args: argparse.Namespace) -> None:
         if self.mode == 'source':
             cfg_files = [
-                os.path.join(self.CONFIGS_DIR, "general", self.GENERAL_CONFIG_FILE + ".yaml"),
-                os.path.join(self.CONFIGS_DIR, "general", self.GENERAL_CONFIG_FILE + "_" + self.mode + ".yaml"),
                 os.path.join(self.CONFIGS_DIR, "datasets", args.dataset + ".yaml")
             ]
         else:
             cfg_files = [
-                os.path.join(self.CONFIGS_DIR, "general", self.GENERAL_CONFIG_FILE + ".yaml"),
-                os.path.join(self.CONFIGS_DIR, "general", self.GENERAL_CONFIG_FILE + "_" + self.mode + ".yaml"),
                 os.path.join(self.CONFIGS_DIR, "methods", args.dataset, args.method + ".yaml"),
                 os.path.join(self.CONFIGS_DIR, "datasets", args.dataset + ".yaml")
             ]
@@ -58,57 +56,49 @@ class ConfigParser:
     def _parse_args(self) -> None:
         parser = argparse.ArgumentParser(
             description='Code for TTA testing. \nSome params are already defined in .yaml files in configs folder. Command line arguments overwrite params defined in .yaml configs')
-        parser.add_argument('--dataset', type=str, default=None, required=True,
-                            help='clad | shift | cifar10c')
+        parser.add_argument('--dataset', type=str, default=None, required=True)
         parser.add_argument('--run_name', type=str, default=None, required=True,
                             help='Name of the run')
-        if self.mode == 'tta':
-            parser.add_argument('--method', type=str, default=None, required=True,
-                                help='frozen | finetune | tent | cotta | eata | sar | artta | bn_stats_adapt | rmt')
-        parser.add_argument('--model', type=str, default=argparse.SUPPRESS,
-                            help='name of the model')
-        parser.add_argument('--project_name', type=str, default=argparse.SUPPRESS,
-                            help='project name for wandb')
-        parser.add_argument('--pretrained_model_path', type=str, default=argparse.SUPPRESS,
-                            help='path to pretrained model')
-        parser.add_argument('--data_root', type=str, default=argparse.SUPPRESS,
+        parser.add_argument('--data_root', type=str, default=None, required=True,
                             help='Root folder where the data is stored')
-        parser.add_argument('--notes', type=str, default=argparse.SUPPRESS,
-                            help='Notes for the run')
-        parser.add_argument('--num_workers', type=int, default=argparse.SUPPRESS,
+        parser.add_argument('--model', type=str, default=None, required=True,
+                            help='Model architecture')
+        if self.mode == 'tta':
+            valid_methods = _METHODS.keys()
+            parser.add_argument('--method', type=str, choices=valid_methods, default=None, required=True,
+                                help=' | '.join(valid_methods))
+        parser.add_argument('--pretrained_model_path', type=str, default=None,
+                            help='path to pretrained model')
+        parser.add_argument('--model_ckpt_dir', type=str, default='models_checkpoints',
+                            help='Directory of model checkpoints')
+        parser.add_argument('--log_dir', type=str, default='logs',
+                            help='General log directory')
+        parser.add_argument('--num_workers', type=int, default=4,
                             help='Num workers to use for dataloading')
-        parser.add_argument('--cuda', type=int, default=argparse.SUPPRESS,
+        parser.add_argument('--cuda', type=int, default=0,
                             help='Whether to use cuda and which GPU to use, -1 if not')
-        parser.add_argument('--seeds', type=lambda s: [int(item) for item in s.strip().split(',')], default=argparse.SUPPRESS,
-                            help='List of random seeds. Use comma to delimeter: --seeds 1234,1235,1236')
-        parser.add_argument('--batch_size', type=int, default=argparse.SUPPRESS,
-                            help="Training batch size")
-        parser.add_argument('--num_epochs', type=int, default=argparse.SUPPRESS,
-                            help="The number of epochs for training")
-        parser.add_argument('--img_size', type=int, default=argparse.SUPPRESS,
+        parser.add_argument('--seed', type=int, default=1234,
+                            help='Random seed')
+        parser.add_argument('--batch_size', type=int, default=10,
+                            help="Batch size")
+        parser.add_argument('--num_epochs', type=int, default=-1,
+                            help="The number of epochs for training. -1 for unlimited epochs")
+        parser.add_argument('--img_size', type=int, default=224,
                             help="Size of images to use")
-        parser.add_argument('--scheduler_gamma', type=float, default=argparse.SUPPRESS,
+        parser.add_argument('--scheduler_gamma', type=float, default=0.85,
                             help="Gamma value for exponential lr scheduler")
-        parser.add_argument('--lr', type=float, default=argparse.SUPPRESS,
+        parser.add_argument('--lr', type=float, default=0.01,
                             help="Learning rate")
-        parser.add_argument('--init_beta', type=float, default=argparse.SUPPRESS,
-                            help="Beta for stats ema")
-        parser.add_argument('--bn_dist_scale', type=float, default=argparse.SUPPRESS,
+        parser.add_argument('--init_beta', type=float, default=0.1,
+                            help="Beta for BN stats ema")
+        parser.add_argument('--bn_dist_scale', type=float, default=10,
                             help="Scale for distributions distance in dynamic BN")
-        parser.add_argument('--alpha', type=float, default=argparse.SUPPRESS,
-                            help="For beta distrib")
-        parser.add_argument('--smoothing_beta', type=float, default=argparse.SUPPRESS,
+        parser.add_argument('--alpha', type=float, default=0.4,
+                            help="Param of beta distribution for mixup")
+        parser.add_argument('--smoothing_beta', type=float, default=0.2,
                             help="Coeff for ema beta")
-        parser.add_argument('--memory_size', type=int, default=argparse.SUPPRESS,
+        parser.add_argument('--memory_size', type=int, default=2000,
                             help="Size of class-balanced memory")
-        parser.add_argument('--bn_stats', type=str, default=argparse.SUPPRESS,
-                            help='source | test | dynamicbn')
-        parser.add_argument('--rank_mode', type=str, default=argparse.SUPPRESS,
-                            help='fixed | threshold | ratio | percentile')
-        parser.add_argument('--wandb', action='store_true',
-                            help="Log with wandb")
-        parser.add_argument('--universal', type=float, default=argparse.SUPPRESS,
-                            help="param for various tests")
         parser.add_argument('--save_results', action='store_true',
                             help="Save results")
         return parser.parse_args()

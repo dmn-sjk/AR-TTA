@@ -15,7 +15,7 @@ def eval_domain(cfg, model, dataloader: torch.utils.data.DataLoader, logger: Ten
 
         acc, mca, acc_per_class = evaluator.add_preds(preds, y)
 
-        log_dict = {f'acc_class_{i}': acc_per_class[i].item() for i in range(cfg['num_classes'])}
+        log_dict = {f'acc_class_{i}': acc_per_class[i].item() for i in range(len(acc_per_class))}
         log_dict['acc'] = acc.item()
         log_dict['mca'] = mca.item()
         logger.log_scalars('per_batch', log_dict)
@@ -23,7 +23,7 @@ def eval_domain(cfg, model, dataloader: torch.utils.data.DataLoader, logger: Ten
         if i == len(dataloader) - 1:
             overall_acc, overall_mca, overall_acc_per_class, num_samples, num_correct, \
                 num_samples_per_class, num_correct_per_class = evaluator.get_summary()
-            log_dict = {f'acc_class_{i}': overall_acc_per_class[i].item() for i in range(cfg['num_classes'])}
+            log_dict = {f'acc_class_{i}': overall_acc_per_class[i].item() for i in range(len(overall_acc_per_class))}
             log_dict['acc'] = overall_acc.item()
             log_dict['mca'] = overall_mca.item()
             logger.log_scalars('per_domain',log_dict)

@@ -78,6 +78,14 @@ A simple yet effective method for real-world continual test-time adaptation that
 
 ---
 
+## 🤖 Source Model Checkpoints
+
+CLAD and SHIFT dataset checkpoints for each seed are available [here](https://drive.google.com/drive/folders/1alLSzB1kJCfubmi9AB8iYmW7DvGj1pEa?usp=sharing).
+
+Checkpoints for CIFAR-10 and ImageNet datasets are automatically downloaded by the [robustbench](https://github.com/RobustBench/robustbench) library. 
+
+---
+
 ## 🧪 Running Experiments
 
 ### Running CTTA

@@ -1,10 +1,11 @@
 from .cifar10c import CIFAR10CDataset
 from .shift import SHIFTClassificationDataset
 from .shift_dev.types import WeathersCoarse, TimesOfDayCoarse
-import datasets.clad as clad
 from .shift_dev.utils.backend import ZipBackend
 from .cifar10_1 import CIFAR101Dataset
 from .imagenetc import ImageNetCDataset
+from .clad.classification.cladc_utils import CladClassification
+from .clad import get_cladc_single_train_task
 from robustbench.data import load_imagenetc
 from utils.transforms import get_transforms
 
@@ -20,7 +21,6 @@ def get_test_dataloader(cfg, domain_dict: dict):
         data = CIFAR10CDataset(cfg['data_root'], 
                                split="test", 
                                transforms=transforms_test, 
-                               imbalanced=cfg['imbalanced'],
                                **domain_dict)        
         shuffle = True
     elif cfg['dataset'] == 'imagenetc':
@@ -39,10 +39,10 @@ def get_test_dataloader(cfg, domain_dict: dict):
                                         **domain_dict)
         shuffle = False
     elif cfg['dataset'] == 'clad':
-        data = clad.get_cladc_single_train_task(cfg["data_root"],
-                                                transform=transforms_test, 
-                                                img_size=cfg["img_size"],
-                                                **domain_dict)
+        data = get_cladc_single_train_task(cfg["data_root"],
+                                            transform=transforms_test, 
+                                            img_size=cfg["img_size"],
+                                            **domain_dict)
         shuffle = False
     elif cfg['dataset'] == 'cifar10_1':
         data = CIFAR101Dataset(cfg['data_root'], transforms=transforms_test)
@@ -71,9 +71,9 @@ def get_source_dataset(cfg, train_split: bool = True):
                                                     backend=ZipBackend(),
                                                     classification_img_size=cfg['img_size'])
     elif cfg['dataset'] == 'clad':
-        dataset = clad.get_cladc_single_train_task(cfg['data_root'], 
-                                                   task_id=0, 
-                                                   transform=None)
+        dataset = get_cladc_single_train_task(cfg['data_root'], 
+                                            task_id=0, 
+                                            transform=None)
 
         with open("datasets/clad_val_idxs.pkl", "rb") as f: 
             val_idxs = pickle.load(f)
@@ -96,3 +96,17 @@ def get_source_dataset(cfg, train_split: bool = True):
         raise NotImplementedError
 
     return dataset
+
+def get_num_classes(cfg):
+    if cfg['dataset'] in 'cifar10c':
+        return CIFAR10CDataset.NUM_CLASSES 
+    elif cfg['dataset'] == 'imagenetc':
+        return ImageNetCDataset.NUM_CLASSES
+    elif cfg['dataset'] == 'shift':
+        return SHIFTClassificationDataset.NUM_CLASSES
+    elif cfg['dataset'] == 'clad':
+        return CladClassification.NUM_CLASSES
+    elif cfg['dataset'] == 'cifar10_1':
+        return CIFAR101Dataset.NUM_CLASSES
+    else:
+        raise ValueError(cfg['dataset'])

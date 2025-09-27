@@ -1,4 +1,0 @@
-dataset: cifar10c
-batch_size: 10
-
-bn_stats: test

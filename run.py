@@ -34,7 +34,7 @@ run_name = 'TEST_CLEAR'
 configs = {
     'artta': {
         'run_name': run_name,
-        'pretrained_model_path': ['models_checkpoints/clad_resnet50_size224_seed1236.pth']
+        # 'pretrained_model_path': ['models_checkpoints/clad_resnet50_size224_seed1236.pth']
     },
     # 'rmt': {
     #     'run_name': run_name,
@@ -61,15 +61,13 @@ configs = {
 }
 
 args_to_exp_name = [
-    'bn_stats',
     # 'batch_size',
     'lr',
-    'bn_dist_scale',
     ]
 
 common_args = '--data_root /datasets --save_results --cuda 0 --num_workers 5 \
-    --seeds 1236'
-    # --seeds 1235,1236'
+    --seed 1234'
+    # --seed 1235,1236'
 
 # TO MODIFY */ ---------------------------------------------
 

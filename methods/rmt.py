@@ -8,7 +8,7 @@ import tqdm
 from torch.utils.data import DataLoader
 from torch.nn import functional as F 
 
-from utils.utils import split_up_model
+from utils.models import split_up_model
 from datasets import get_source_dataset
 from utils.cotta_transforms import get_tta_transforms
 from utils.math import update_ema_variables
@@ -51,7 +51,7 @@ class RMT(TTAMethod, method_name='rmt'):
         self.warmup_steps = 50000
         self.final_lr = cfg['lr']
         arch_name = cfg['model']
-        ckpt_path = "rmt_ckpts"
+        ckpts_dir = os.path.join(cfg['model_ckpt_dir'], "rmt_ckpts")
         self.dataset_name = cfg['dataset']
 
         self.tta_transform = get_tta_transforms(img_size=cfg['img_size'])  
@@ -67,9 +67,9 @@ class RMT(TTAMethod, method_name='rmt'):
         self.feature_extractor, self.classifier = split_up_model(self.model, arch_name, self.dataset_name)
 
         # define the prototype paths
-        proto_dir_path = os.path.join(ckpt_path, "prototypes")
+        proto_dir_path = os.path.join(ckpts_dir, "prototypes")
         if self.dataset_name == "domainnet126":
-            fname = f"protos_{self.dataset_name}_{ckpt_path.split(os.sep)[-1].split('_')[1]}.pth"
+            fname = f"protos_{self.dataset_name}_{ckpts_dir.split(os.sep)[-1].split('_')[1]}.pth"
         else:
             fname = f"protos_{self.dataset_name}_{arch_name}_{self.dataset_name}.pth"
         fname = os.path.join(proto_dir_path, fname)
@@ -115,24 +115,24 @@ class RMT(TTAMethod, method_name='rmt'):
 
         # warm up the mean-teacher framework
         if self.warmup_steps > 0:
-            warmup_ckpt_path = os.path.join(ckpt_path, "warmup")
-            ckpt_path = f"ckpt_warmup_{self.dataset_name}_{arch_name}_bs{batch_size_src}_lr{self.optimizer.param_groups[0]['lr']}.pth"
-            ckpt_path = os.path.join(warmup_ckpt_path, ckpt_path)
+            warmup_ckpt_path = os.path.join(ckpts_dir, "warmup")
+            ckpts_dir = f"ckpt_warmup_{self.dataset_name}_{arch_name}_bs{batch_size_src}_lr{self.optimizer.param_groups[0]['lr']}.pth"
+            ckpts_dir = os.path.join(warmup_ckpt_path, ckpts_dir)
 
-            if os.path.exists(ckpt_path):
+            if os.path.exists(ckpts_dir):
                 print("Loading warmup checkpoint...")
-                checkpoint = torch.load(ckpt_path)
+                checkpoint = torch.load(ckpts_dir)
                 self.model.load_state_dict(checkpoint["model"])
                 self.model_ema.load_state_dict(checkpoint["model_ema"])
                 self.optimizer.load_state_dict(checkpoint["optimizer"])
-                print(f"Loaded from {ckpt_path}")
+                print(f"Loaded from {ckpts_dir}")
             else:
                 os.makedirs(warmup_ckpt_path, exist_ok=True)
                 self.warmup()
                 torch.save({"model": self.model.state_dict(),
                             "model_ema": self.model_ema.state_dict(),
                             "optimizer": self.optimizer.state_dict()
-                            }, ckpt_path)
+                            }, ckpts_dir)
 
     @torch.enable_grad()  # ensure grads in possible no grad context for testing
     def warmup(self):

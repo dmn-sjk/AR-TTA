@@ -3,6 +3,7 @@ import torchvision
 import torch
 from robustbench.utils import load_model
 import timm
+import torch.nn as nn
 
 
 def get_model(cfg):
@@ -40,3 +41,17 @@ def get_model(cfg):
     model.eval()
 
     return model
+
+def split_up_model(model, model_name, dataset=None):
+    if 'wideresnet' in model_name: 
+        encoder = nn.Sequential(*list(model.children())[:-1], nn.AvgPool2d(kernel_size=8, stride=8), nn.Flatten())
+    elif 'resnet' in model_name:
+        if dataset == 'imagenetc':
+            encoder = nn.Sequential(model.normalize, *list(model.model.children())[:-1], nn.Flatten())
+            model = model.model
+        else:
+            encoder = nn.Sequential(*list(model.children())[:-1], nn.Flatten())
+        
+    classifier = model.fc
+
+    return encoder, classifier
