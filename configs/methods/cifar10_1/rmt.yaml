@@ -2,6 +2,4 @@ lr: 3.125e-05
 optimizer: adam
 beta: 0.9
 weight_decay: 0.
-steps: 1
-episodic: false
 nesterov: false

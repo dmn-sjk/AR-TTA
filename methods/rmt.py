@@ -51,7 +51,7 @@ class RMT(TTAMethod, method_name='rmt'):
         self.warmup_steps = 50000
         self.final_lr = cfg['lr']
         arch_name = cfg['model']
-        ckpts_dir = os.path.join(cfg['model_ckpt_dir'], "rmt_ckpts")
+        ckpts_dir = os.path.join(cfg['ckpts_dir'], "rmt_ckpts")
         self.dataset_name = cfg['dataset']
 
         self.tta_transform = get_tta_transforms(img_size=cfg['img_size'])  

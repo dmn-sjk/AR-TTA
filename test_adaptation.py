@@ -29,9 +29,6 @@ def main():
     cfg['domains'] = domains
     model = get_method(cfg)
 
-    if cfg['save_results']:
-        save_config(cfg, experiment_name)
-
     log_dir = get_seed_folder(cfg)
     logger = TensorBoardLogger(os.path.join(log_dir, 'tb'))
 

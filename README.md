@@ -41,40 +41,31 @@ A simple yet effective method for real-world continual test-time adaptation that
 
 ## 📊 Dataset Preparation
 
-<!-- TODO: add IN-C --> 
-
-### SHIFT Dataset
-
-1. Navigate to the cloned `shift-dev` repository
-2. Download the dataset using the following command:
-
-   ```bash
-   cd shift-dev
-   python download.py --view front --group "[img, det_2d]" --split all --framerate images <TARGET_DIR>
-   ```
-
-### CLAD Dataset
-
-1. Download and decompress the labeled SODA10M dataset following the [official instructions](https://soda-2d.github.io/download.html#instructions)
-
 ### CIFAR-10 and CIFAR-10-C Datasets
 
-1. **Download CIFAR-10:**
-   ```bash
-   wget https://www.cs.toronto.edu/~kriz/cifar-10-python.tar.gz
-   tar -xvf cifar-10-python.tar.gz
-   ```
+1. Download the CIFAR-10 dataset from [this link](https://www.cs.toronto.edu/~kriz/cifar-10-python.tar.gz) and decompress the files.
 
-2. **Download CIFAR-10-C:**
-   ```bash
-   wget https://zenodo.org/api/files/a35f793a-6997-4603-a92f-926a6bc0fa60/CIFAR-10-C.tar
-   tar -xvf CIFAR-10-C.tar
-   ```
+2. Download CIFAR-10-C from [this link](https://zenodo.org/records/2535967/files/CIFAR-10-C.tar?download=1) and decompress the files.
 
 3. **Preprocess the datasets:**
    ```bash
    python utils/process_cifar.py cifar-10c <path_to_CIFAR10C_dataset> <path_to_CIFAR10_dataset>
    ```
+
+### ImageNet and ImageNet-C Datasets
+1. Download [ImageNet](https://www.image-net.org/download.php) and [ImageNet-C](https://zenodo.org/record/2235448#.Yj2RO_co_mF).
+
+### SHIFT Dataset
+
+1. Download the dataset using the following command:
+
+   ```bash
+   python datasets/shift_dev/download.py --view front --group "[img, det_2d]" --split all --framerate images <TARGET_DIR>
+   ```
+
+### CLAD Dataset
+
+1. Download and decompress the labeled SODA10M dataset following the [official instructions](https://soda-2d.github.io/download.html#instructions)
 
 ---
 
@@ -82,7 +73,7 @@ A simple yet effective method for real-world continual test-time adaptation that
 
 CLAD and SHIFT dataset checkpoints for each seed are available [here](https://drive.google.com/drive/folders/1alLSzB1kJCfubmi9AB8iYmW7DvGj1pEa?usp=sharing).
 
-Checkpoints for CIFAR-10 and ImageNet datasets are automatically downloaded by the [robustbench](https://github.com/RobustBench/robustbench) library. 
+Checkpoints for CIFAR-10 and ImageNet datasets are automatically downloaded by the [robustbench](https://github.com/RobustBench/robustbench) library.
 
 ---
 
