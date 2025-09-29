@@ -24,7 +24,8 @@ def get_test_dataloader(cfg, domain_dict: dict):
                                **domain_dict)        
         shuffle = True
     elif cfg['dataset'] == 'imagenetc':
-        domain_dict['corruptions'] = [domain_dict['corruptions']]
+        domain_dict['corruptions'] = [domain_dict['corruption']]
+        del domain_dict['corruption']
         x, y = load_imagenetc(data_dir=cfg['data_root'],
                               shuffle=False,
                               **domain_dict)
