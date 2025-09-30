@@ -1,7 +1,11 @@
-import torch
+import os
 
-from .tensorboard_logger import TensorBoardLogger
-from .evaluator import Evaluator
+import numpy as np
+import torch
+import yaml
+
+from evaluation.evaluator import Evaluator
+from utils.tensorboard_logger import TensorBoardLogger
 
 
 def eval_domain(cfg, model, dataloader: torch.utils.data.DataLoader, logger: TensorBoardLogger):
@@ -32,3 +36,21 @@ def eval_domain(cfg, model, dataloader: torch.utils.data.DataLoader, logger: Ten
         
     return overall_acc, overall_mca, overall_acc_per_class, \
         num_samples, num_correct, num_samples_per_class, num_correct_per_class
+
+
+def eval_seeds(log_dir: str):
+    seed_results = {}
+    
+    for entity in os.listdir(log_dir):
+        entity_path = os.path.join(log_dir, entity)
+        if os.path.isdir(entity_path) and 'seed' in entity:
+            overall_path = os.path.join(entity_path, 'overall.yaml')
+            if os.path.exists(overall_path):
+                with open(overall_path, 'r') as f:
+                    seed_results[entity] = yaml.safe_load(f)
+            else:
+                print(f"No overall.yaml found for {entity}, omitting!")
+    
+    acc = np.mean([res['overall_acc'] for res in seed_results.values()]).item()
+    amca = np.mean([res['AMCA'] for res in seed_results.values()]).item()
+    return acc, amca, len(seed_results.keys())

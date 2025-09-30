@@ -1,6 +1,7 @@
+import os
+
 from .shift_dev import SHIFTDataset
 from .shift_dev.types import Keys
-import os
 
 
 class _SHIFTClassificationTargets:

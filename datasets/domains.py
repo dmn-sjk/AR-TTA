@@ -1,4 +1,4 @@
-from datasets.shift_dev.types import WeathersCoarse, TimesOfDayCoarse
+from datasets.shift_dev.types import TimesOfDayCoarse, WeathersCoarse
 
 
 def get_domain_sequence(cfg):

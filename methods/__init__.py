@@ -1,4 +1,4 @@
-from utils.models import get_model
+from torch import nn
 
 _METHODS = {}
 
@@ -8,9 +8,7 @@ def register_strategy(name):
         return func
     return decorator
 
-def get_method(cfg: dict):
-    model = get_model(cfg)
-
+def get_method(cfg: dict, model: nn.Module):
     try:
         return _METHODS[cfg['method']](cfg, model)
     except KeyError:

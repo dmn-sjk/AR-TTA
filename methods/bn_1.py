@@ -1,7 +1,8 @@
-from .tta_method import TTAMethod
-
 import torch
 import torch.nn as nn
+
+from methods.tta_method import TTAMethod
+
 
 class BN_1(TTAMethod, method_name='bn_1'):
     def __init__(self, cfg, model: nn.Module):

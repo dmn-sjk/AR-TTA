@@ -1,8 +1,8 @@
-from utils.math import softmax_entropy
-from .tta_method import TTAMethod
-
 import torch
 import torch.nn as nn
+
+from methods.tta_method import TTAMethod
+from utils.math import softmax_entropy
 
 
 class Tent(TTAMethod, method_name='tent'):

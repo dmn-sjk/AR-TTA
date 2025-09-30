@@ -1,7 +1,8 @@
-from .tta_method import TTAMethod
-
 import torch
 import torch.nn as nn
+
+from methods.tta_method import TTAMethod
+
 
 class Source(TTAMethod, method_name='source'):
     def __init__(self, cfg, model: nn.Module):

@@ -1,11 +1,12 @@
 # KATANA: Simple Post-Training Robustness Using Test Time Augmentations
 # https://arxiv.org/pdf/2109.08191v1.pdf
-import torch
-import torchvision.transforms.functional as F
-import torchvision.transforms as transforms
-from torchvision.transforms import ColorJitter, Compose, Lambda
-from numpy import random
 import PIL
+import torch
+import torchvision.transforms as transforms
+import torchvision.transforms.functional as F
+from numpy import random
+from torchvision.transforms import ColorJitter, Compose, Lambda
+
 
 class GaussianNoise(torch.nn.Module):
     def __init__(self, mean=0., std=1.):

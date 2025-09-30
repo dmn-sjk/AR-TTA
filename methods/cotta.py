@@ -4,7 +4,7 @@ import torch.nn as nn
 
 from utils.cotta_transforms import get_tta_transforms
 from utils.math import update_ema_variables, softmax_entropy
-from .tta_method import TTAMethod
+from methods.tta_method import TTAMethod
 
 
 

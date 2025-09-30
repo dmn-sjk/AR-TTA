@@ -1,14 +1,14 @@
-import torch
-from typing import Callable
-import os
-import numpy as np
-from torchvision.datasets import ImageNet
 import json
-from PIL import Image
-from torchvision.transforms.functional import pil_to_tensor
-from torchvision import transforms
+import os
+from typing import Callable
 
-from datasets.domains import SEVERITIES, CORRUPTIONS_SEQ
+import torch
+from PIL import Image
+from torchvision import transforms
+from torchvision.transforms.functional import pil_to_tensor
+
+from datasets.domains import CORRUPTIONS_SEQ, SEVERITIES
+
 
 class ImageNetCDataset(torch.utils.data.Dataset):
     NUM_CLASSES = 1000

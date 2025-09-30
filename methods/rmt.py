@@ -1,18 +1,19 @@
 
-from copy import deepcopy
-import torch
-import torch.nn as nn
-import torch.jit
 import os
-import tqdm
-from torch.utils.data import DataLoader
-from torch.nn import functional as F 
+from copy import deepcopy
 
-from utils.models import split_up_model
+import torch
+import torch.jit
+import torch.nn as nn
+import tqdm
+from torch.nn import functional as F
+from torch.utils.data import DataLoader
+
 from datasets import get_source_dataset
+from methods.tta_method import TTAMethod
 from utils.cotta_transforms import get_tta_transforms
 from utils.math import update_ema_variables
-from .tta_method import TTAMethod
+from utils.models import split_up_model
 
 
 class SymmetricCrossEntropy(nn.Module):

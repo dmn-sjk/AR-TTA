@@ -1,4 +1,4 @@
-from .tta_method import TTAMethod
+from methods.tta_method import TTAMethod
 from utils.math import update_ema_variables
 from datasets import get_source_dataset
 from batch_norms.dynamic_bn import DynamicBN

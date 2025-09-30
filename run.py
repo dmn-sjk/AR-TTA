@@ -26,16 +26,16 @@ GRES = ""
 
 datasets = [
     'cifar10c',
-    'cifar10_1',
-    'clad',
-    'imagenetc',
-    'shift',
+    # 'cifar10_1',
+    # 'clad',
+    # 'imagenetc',
+    # 'shift',
     ]
 
 seeds = [
     1234,
-    1235,
-    1236
+    # 1235,
+    # 1236
 ]
 
 RUN_NAME = ''
@@ -43,31 +43,31 @@ RUN_NAME = ''
 
 # all params should be in a form of array, except EXP_NAME 
 configs = {
-    'source': {
-        'run_name': RUN_NAME,
-        },
+    # 'source': {
+    #     'run_name': RUN_NAME,
+    #     },
     'artta': {
         'run_name': RUN_NAME,
         'memory_size': [0, 2000],
     },
-    'rmt': {
-        'run_name': RUN_NAME,
-    },
-    'eata': {
-        'run_name': RUN_NAME,
-        },
-    'tent': {
-        'run_name': RUN_NAME,
-        },
-    'sar': {
-        'run_name': RUN_NAME,
-        },
-    'bn_1': {
-        'run_name': RUN_NAME,
-        },
-    'cotta': {
-        'run_name': RUN_NAME,
-        },
+    # 'rmt': {
+    #     'run_name': RUN_NAME,
+    # },
+    # 'eata': {
+    #     'run_name': RUN_NAME,
+    #     },
+    # 'tent': {
+    #     'run_name': RUN_NAME,
+    #     },
+    # 'sar': {
+    #     'run_name': RUN_NAME,
+    #     },
+    # 'bn_1': {
+    #     'run_name': RUN_NAME,
+    #     },
+    # 'cotta': {
+    #     'run_name': RUN_NAME,
+    #     },
 }
 
 # args to include in experiment name

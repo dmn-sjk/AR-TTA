@@ -1,5 +1,5 @@
-import torch.nn as nn
 import torch
+import torch.nn as nn
 
 
 def update_ema_variables(ema_model: nn.Module, model: nn.Module, alpha_teacher: float):

@@ -1,6 +1,5 @@
 import torch
 
-from datasets import get_num_classes
 
 class Evaluator:
     def __init__(self, cfg):

@@ -3,15 +3,16 @@ Copyright to SAR Authors, ICLR 2023 Oral (notable-top-5%)
 built upon on Tent code.
 """
 
-from utils.math import softmax_entropy
-from .tta_method import TTAMethod
-from utils.sam import SAM
-
+import math
 from copy import deepcopy
+
+import numpy as np
 import torch
 import torch.nn as nn
-import math
-import numpy as np
+
+from methods.tta_method import TTAMethod
+from utils.math import softmax_entropy
+from utils.sam import SAM
 
 
 class SAR(TTAMethod, method_name='sar'):

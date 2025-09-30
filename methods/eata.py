@@ -3,14 +3,15 @@ Copyright to EATA ICML 2022 Authors, 2022.03.20
 Based on Tent ICLR 2021 Spotlight. 
 """
 
+import math
+
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-import math
 
-from .tta_method import TTAMethod
-from utils.math import softmax_entropy
 from datasets import get_source_dataset
+from methods.tta_method import TTAMethod
+from utils.math import softmax_entropy
 
 
 class EATA(TTAMethod, method_name='eata'):

@@ -1,8 +1,9 @@
-import torch
-from typing import Callable
 import os
-import numpy as np
 import pathlib
+from typing import Callable
+
+import numpy as np
+import torch
 
 
 def load_cifar10_1_dataset(data_dir, version_string='v6'):

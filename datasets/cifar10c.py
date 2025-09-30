@@ -1,9 +1,10 @@
-import torch
-from typing import Callable
 import os
-import numpy as np
+from typing import Callable
 
-from datasets.domains import SEVERITIES, CORRUPTIONS_SEQ
+import numpy as np
+import torch
+
+from datasets.domains import CORRUPTIONS_SEQ, SEVERITIES
 
 
 class CIFAR10CDataset(torch.utils.data.Dataset):

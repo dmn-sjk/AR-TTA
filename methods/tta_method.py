@@ -1,7 +1,7 @@
-from utils.optim import get_optimizer
-from . import _METHODS
-
 import torch.nn as nn
+
+from methods import _METHODS
+from utils.optim import get_optimizer
 
 
 class TTAMethod(nn.Module):

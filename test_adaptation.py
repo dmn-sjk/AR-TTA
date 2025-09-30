@@ -1,17 +1,24 @@
-import torch
 import os
+
+import torch
 import yaml
 
-from utils.utils import get_experiment_folder, set_seed, get_experiment_name, save_config, \
-    get_seed_folder, get_device
-from utils.config_parser import ConfigParser
 from datasets import get_num_classes, get_test_dataloader
 from datasets.domains import get_domain_sequence
-from evaluation.eval import eval_domain
+from evaluation.eval import eval_domain, eval_seeds
 from evaluation.evaluator import Evaluator
-from evaluation.tensorboard_logger import TensorBoardLogger
-from evaluation.eval_seeds import eval_seeds
+from utils.tensorboard_logger import TensorBoardLogger
 from methods import get_method
+from utils.config_parser import ConfigParser
+from utils.models import get_model
+from utils.utils import (
+    get_device,
+    get_experiment_folder,
+    get_experiment_name,
+    get_seed_folder,
+    save_config,
+    set_seed,
+)
 
 
 def main():
@@ -27,7 +34,11 @@ def main():
 
     domains = get_domain_sequence(cfg)
     cfg['domains'] = domains
-    model = get_method(cfg)
+
+    src_model = get_model(cfg)
+    model = get_method(cfg, src_model)
+
+    save_config(cfg)
 
     log_dir = get_seed_folder(cfg)
     logger = TensorBoardLogger(os.path.join(log_dir, 'tb'))

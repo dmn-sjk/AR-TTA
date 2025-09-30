@@ -1,9 +1,9 @@
-from torch import nn
-import torch
-import random
-import numpy as np
 import os
+import random
 import subprocess
+
+import numpy as np
+import torch
 import yaml
 
 
@@ -29,9 +29,10 @@ def get_seed_folder(cfg: dict) -> str:
 def get_git_revision_hash() -> str:
     return subprocess.check_output(['git', 'rev-parse', 'HEAD']).decode('ascii').strip()
 
-def save_config(cfg, experiment_name):
-    os.makedirs(get_seed_folder(cfg), exist_ok = True)
-    with open(os.path.join(get_experiment_folder(cfg), experiment_name + '_config.yaml'), 'w') as f:
+def save_config(cfg):
+    folder = get_seed_folder(cfg)
+    os.makedirs(folder, exist_ok = True)
+    with open(os.path.join(folder, get_experiment_name(cfg) + '_config.yaml'), 'w') as f:
         yaml.dump(cfg, f, default_flow_style=False)
 
 def get_device(cfg):

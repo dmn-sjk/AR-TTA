@@ -1,7 +1,8 @@
 import os
-import sys
-import numpy as np
 import pickle
+import sys
+
+import numpy as np
 
 severities = [1, 2, 3, 4, 5]
 corruptions = ["shot_noise", "motion_blur", "snow", "pixelate", "gaussian_noise", "defocus_blur", "brightness", "fog", \

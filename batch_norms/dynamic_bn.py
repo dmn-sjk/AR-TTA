@@ -5,8 +5,10 @@ and https://github.com/ptrblck/pytorch_misc/blob/master/batch_norm_manual.py.
 
 
 from typing import Any, Mapping
+
 import torch
 from torch.nn.modules.batchnorm import BatchNorm2d
+
 from utils.math import gauss_symm_kl_divergence
 
 
@@ -50,8 +52,8 @@ class DynamicBN(BatchNorm2d):
     def forward(self, input: torch.Tensor) -> torch.Tensor:
         self._check_input_dim(input)
 
-        assert self.training == False
-        assert self.track_running_stats == False
+        assert not self.training
+        assert not self.track_running_stats
 
         if self.training:
             return super(DynamicBN, self).forward(input)
